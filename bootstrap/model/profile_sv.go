@@ -2,7 +2,7 @@ package model
 
 import (
 	"github.com/ggoop/mdf/bootstrap/errors"
-	"github.com/ggoop/mdf/repositories"
+	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/utils"
 )
 

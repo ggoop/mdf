@@ -6,11 +6,11 @@ import (
 
 	"github.com/ggoop/mdf/bootstrap/controller"
 	"github.com/ggoop/mdf/bootstrap/service"
-	"github.com/ggoop/mdf/context"
-	"github.com/ggoop/mdf/di"
-	"github.com/ggoop/mdf/glog"
-	"github.com/ggoop/mdf/http/middleware"
-	"github.com/ggoop/mdf/repositories"
+	"github.com/ggoop/mdf/framework/context"
+	"github.com/ggoop/mdf/framework/db/repositories"
+	"github.com/ggoop/mdf/framework/di"
+	"github.com/ggoop/mdf/framework/glog"
+	"github.com/ggoop/mdf/framework/http/middleware"
 )
 
 // 路由服务注册

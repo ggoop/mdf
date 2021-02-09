@@ -12,7 +12,7 @@ import (
 
 	"github.com/ggoop/mdf/bootstrap/errors"
 	"github.com/ggoop/mdf/bootstrap/model"
-	"github.com/ggoop/mdf/glog"
+	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/utils"
 )
 

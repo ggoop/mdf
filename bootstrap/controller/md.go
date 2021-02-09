@@ -9,14 +9,14 @@ import (
 	"strings"
 
 	"github.com/ggoop/mdf/bootstrap/model"
-	resources "github.com/ggoop/mdf/bootstrap/resource"
+	"github.com/ggoop/mdf/bootstrap/resource"
 	"github.com/ggoop/mdf/bootstrap/service"
-	"github.com/ggoop/mdf/context"
-	"github.com/ggoop/mdf/files"
-	"github.com/ggoop/mdf/http/results"
-	"github.com/ggoop/mdf/md"
-	"github.com/ggoop/mdf/mof"
-	"github.com/ggoop/mdf/repositories"
+	"github.com/ggoop/mdf/framework/context"
+	"github.com/ggoop/mdf/framework/db/repositories"
+	"github.com/ggoop/mdf/framework/files"
+	"github.com/ggoop/mdf/framework/http/results"
+	"github.com/ggoop/mdf/framework/md"
+	"github.com/ggoop/mdf/framework/mof"
 	"github.com/ggoop/mdf/utils"
 )
 

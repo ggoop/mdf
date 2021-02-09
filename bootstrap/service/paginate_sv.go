@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/ggoop/mdf/gorm"
+	"github.com/ggoop/mdf/framework/db/gorm"
 	"github.com/ggoop/mdf/utils"
 )
 

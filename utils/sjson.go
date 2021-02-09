@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 
-	"github.com/ggoop/mdf/glog"
+	"github.com/ggoop/mdf/framework/glog"
 )
 
 // JSONTime format json time field by myself

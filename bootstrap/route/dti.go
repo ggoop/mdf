@@ -1,9 +1,10 @@
 package route
 
 import (
-	"github.com/ggoop/mdf/bootstrap/dti"
-	"github.com/ggoop/mdf/http/middleware"
 	"github.com/kataras/iris"
+
+	"github.com/ggoop/mdf/bootstrap/dti"
+	"github.com/ggoop/mdf/framework/http/middleware"
 )
 
 func RegisterDti(app *iris.Application, contextMid *middleware.Context) {

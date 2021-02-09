@@ -2,7 +2,7 @@ package service
 
 import (
 	"github.com/ggoop/mdf/bootstrap/model"
-	"github.com/ggoop/mdf/repositories"
+	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/utils"
 )
 

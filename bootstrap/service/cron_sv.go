@@ -4,19 +4,21 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ggoop/mdf/bootstrap/errors"
-	"github.com/ggoop/mdf/glog"
-	"github.com/ggoop/mdf/reg"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
-	"github.com/ggoop/mdf/utils"
+	"github.com/ggoop/mdf/bootstrap/errors"
+	"github.com/ggoop/mdf/framework/glog"
+	"github.com/ggoop/mdf/framework/reg"
+
 	"github.com/robfig/cron"
 
-	"github.com/ggoop/mdf/repositories"
+	"github.com/ggoop/mdf/utils"
+
+	"github.com/ggoop/mdf/framework/db/repositories"
 
 	"github.com/ggoop/mdf/bootstrap/model"
 )

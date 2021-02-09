@@ -5,9 +5,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/ggoop/mdf/http/middleware"
-	"github.com/ggoop/mdf/http/results"
-	"github.com/ggoop/mdf/reg"
+	"github.com/ggoop/mdf/framework/http/middleware"
+	"github.com/ggoop/mdf/framework/http/results"
+	"github.com/ggoop/mdf/framework/reg"
 )
 
 func RegisterProxy(app *iris.Application, contextMid *middleware.Context) {

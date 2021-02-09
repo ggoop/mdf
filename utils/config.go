@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ggoop/mdf/glog"
+	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/gmap"
 )
 

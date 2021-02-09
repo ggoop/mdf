@@ -1,8 +1,8 @@
 package model
 
 import (
-	"github.com/ggoop/mdf/context"
-	"github.com/ggoop/mdf/md"
+	"github.com/ggoop/mdf/framework/context"
+	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 )
 

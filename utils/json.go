@@ -9,7 +9,8 @@ package utils
 
 import (
 	"encoding/json"
-	"github.com/ggoop/mdf/glog"
+
+	"github.com/ggoop/mdf/framework/glog"
 )
 
 /**

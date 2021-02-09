@@ -3,34 +3,19 @@ module github.com/ggoop/mdf
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
 	github.com/CloudyKit/fastprinter v0.0.0-20200109182630-33d98a066a53 // indirect
-	github.com/ajg/form v1.5.1 // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20200620013148-b91950f658ec
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5
-	github.com/fasthttp-contrib/websocket v0.0.0-20160511215533-1f3b11f56072 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/imkira/go-interpol v1.1.0 // indirect
-	github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88 // indirect
 	github.com/kataras/iris v0.0.0-20190723163631-de9904ff6d38
-	github.com/klauspost/compress v1.10.10 // indirect
+	github.com/klauspost/compress v1.11.7 // indirect
 	github.com/lib/pq v1.7.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
-	github.com/moul/http2curl v1.0.0 // indirect
-	github.com/nats-io/nats-server/v2 v2.1.7 // indirect
-	github.com/onsi/ginkgo v1.14.0 // indirect
 	github.com/robfig/cron v1.2.0
-	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/spf13/viper v1.7.0
-	github.com/valyala/fasthttp v1.15.1 // indirect
-	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
-	github.com/yalp/jsonpath v0.0.0-20180802001716-5cc68e5049a0 // indirect
-	github.com/yudai/gojsondiff v1.0.0 // indirect
-	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
-	github.com/yudai/pp v2.0.1+incompatible // indirect
 	go.uber.org/dig v1.7.0
 	go.uber.org/zap v1.15.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

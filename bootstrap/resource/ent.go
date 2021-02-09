@@ -2,7 +2,7 @@ package resources
 
 import (
 	"github.com/ggoop/mdf/bootstrap/model"
-	"github.com/ggoop/mdf/http/results"
+	"github.com/ggoop/mdf/framework/http/results"
 	"github.com/ggoop/mdf/utils"
 )
 

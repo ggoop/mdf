@@ -5,11 +5,16 @@ import (
 	"github.com/kataras/iris/mvc"
 
 	"github.com/ggoop/mdf/bootstrap/controller"
-	"github.com/ggoop/mdf/http/middleware"
-	"github.com/ggoop/mdf/reg"
+	"github.com/ggoop/mdf/framework/http/middleware"
+	"github.com/ggoop/mdf/framework/reg"
 )
 
 func registerSys(app *iris.Application, contextMid *middleware.Context) {
+	//dev route
+	{
+		m := mvc.New(app.Party("/api/dev", contextMid.Default))
+		m.Handle(new(controller.DevController))
+	}
 	//md route
 	{
 		m := mvc.New(app.Party("/api/md", contextMid.Default))

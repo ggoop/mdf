@@ -6,10 +6,10 @@ import (
 
 	"github.com/ggoop/mdf/bootstrap/errors"
 	"github.com/ggoop/mdf/bootstrap/model"
-	"github.com/ggoop/mdf/md"
+	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 
-	"github.com/ggoop/mdf/repositories"
+	"github.com/ggoop/mdf/framework/db/repositories"
 )
 
 type RoleSv struct {

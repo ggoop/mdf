@@ -1,11 +1,11 @@
 package model
 
 import (
-	"github.com/ggoop/mdf/di"
-	"github.com/ggoop/mdf/glog"
-	"github.com/ggoop/mdf/md"
-	"github.com/ggoop/mdf/query"
-	"github.com/ggoop/mdf/repositories"
+	"github.com/ggoop/mdf/framework/db/repositories"
+	"github.com/ggoop/mdf/framework/di"
+	"github.com/ggoop/mdf/framework/glog"
+	"github.com/ggoop/mdf/framework/md"
+	"github.com/ggoop/mdf/framework/query"
 )
 
 // 注册数据模型,提供数据层，按模块注册数据模型

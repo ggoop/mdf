@@ -2,8 +2,9 @@ package model
 
 import (
 	"encoding/json"
-	"github.com/ggoop/mdf/glog"
-	"github.com/ggoop/mdf/md"
+
+	"github.com/ggoop/mdf/framework/glog"
+	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 )
 

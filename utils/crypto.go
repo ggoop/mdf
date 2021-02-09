@@ -8,8 +8,9 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/ggoop/mdf/glog"
+	"github.com/dgrijalva/jwt-go"
+
+	"github.com/ggoop/mdf/framework/glog"
 )
 
 func getKey(key string) []byte {

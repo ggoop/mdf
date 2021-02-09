@@ -11,15 +11,15 @@ import (
 	"github.com/ggoop/mdf/bootstrap/model"
 	resources "github.com/ggoop/mdf/bootstrap/resource"
 	"github.com/ggoop/mdf/bootstrap/service"
-	"github.com/ggoop/mdf/configs"
+	"github.com/ggoop/mdf/framework/configs"
 	"github.com/ggoop/mdf/utils"
 
 	"github.com/kataras/iris"
 
-	"github.com/ggoop/mdf/context"
-	"github.com/ggoop/mdf/glog"
-	"github.com/ggoop/mdf/http/results"
-	"github.com/ggoop/mdf/repositories"
+	"github.com/ggoop/mdf/framework/context"
+	"github.com/ggoop/mdf/framework/db/repositories"
+	"github.com/ggoop/mdf/framework/glog"
+	"github.com/ggoop/mdf/framework/http/results"
 )
 
 type OAuthController struct {
