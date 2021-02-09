@@ -1,0 +1,23 @@
+app:
+    token: 01e8b4a088391070beb7a30051fb196f
+    code: appcode
+    name: 应用名称
+    locale: zh-cn
+    port: 30035
+    debug: true
+db:
+    # mysql,mssql,godror，分别为mysql,mssql,oracle驱动
+    driver: mysql
+    # 这里填写数据库服务器地址，本地填写 localhost
+    host: localhost
+    # 3306,1433,1521，一般mysql端口为3306，mssql端口为1422，oracle端口为1521
+    port: 3306
+    # 数据库名称，oracle：填写服务名，如orcl
+    database: mdf
+    # root ,sa ,scott
+    username: root
+    password: root
+log: 
+  #Level such as fatal,error, warn, info, debug, or disable,Level defaults to "info"
+  level: info
+  path: ./storage/logs
