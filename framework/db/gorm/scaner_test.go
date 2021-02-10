@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ggoop/mdf/gorm"
+	"github.com/ggoop/mdf/framework/db/gorm"
 )
 
 func TestScannableSlices(t *testing.T) {

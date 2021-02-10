@@ -1,4 +1,4 @@
-package query
+package md
 
 type IQWhere interface {
 	Where(query string, args ...interface{}) IQWhere

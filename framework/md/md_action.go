@@ -18,7 +18,7 @@ type MDActionCommand struct {
 	Method    string      `gorm:"size:20;name:请求方式" json:"method"`
 	Target    string      `gorm:"size:36;name:目标" json:"target"`
 	Script    string      `gorm:"type:text;name:脚本" json:"script"`
-	Rules     string      `gorm:"type:text;name:规则链" json:"rules"`
+	Enabled   utils.SBool `gorm:"default:true" json:"enabled"`
 	System    utils.SBool `gorm:"name:系统的" json:"system"`
 }
 
@@ -30,11 +30,17 @@ type MDActionRule struct {
 	ID        string      `gorm:"primary_key;size:50" json:"id"` //领域.规则：md.save，ui.save
 	CreatedAt utils.Time  `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt utils.Time  `gorm:"name:更新时间" json:"updated_at"`
+	Domain    string      `gorm:"size:36;name:模块" json:"domain"`
 	OwnerType string      `gorm:"size:36;name:拥有者类型" json:"owner_type"`
 	OwnerID   string      `gorm:"size:36;name:拥有者ID" json:"owner_id"` //common为公共动作
 	Code      string      `gorm:"size:50;name:编码" json:"code"`
 	Name      string      `gorm:"size:50;name:名称" json:"name"`
+	Action    string      `gorm:"size:50;name:动作" json:"action"`
+	Url       string      `gorm:"size:100;name:服务路径" json:"url"`
+	Sequence  int         `gorm:"size:3;name:顺序" json:"sequence"`
+	Replaced  string      `gorm:"size:50;name:被替换的" json:"replaced"`
 	Async     utils.SBool `gorm:"name:异步的" json:"async"`
+	Enabled   utils.SBool `gorm:"default:true" json:"enabled"`
 	System    utils.SBool `gorm:"name:系统的" json:"system"`
 }
 

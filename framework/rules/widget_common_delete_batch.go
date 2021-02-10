@@ -6,7 +6,6 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
 	"github.com/ggoop/mdf/utils"
 )
 
@@ -17,7 +16,7 @@ type CommonDeleteBatch struct {
 func NewCommonDeleteBatch(repo *repositories.MysqlRepo) *CommonDeleteBatch {
 	return &CommonDeleteBatch{repo}
 }
-func (s CommonDeleteBatch) Exec(req *mof.ReqContext, res *mof.ResContext) error {
+func (s CommonDeleteBatch) Exec(req *md.ReqContext, res *md.ResContext) error {
 	if len(req.IDS) == 0 {
 		return glog.Error("缺少 ID 参数！")
 	}
@@ -37,6 +36,6 @@ func (s CommonDeleteBatch) Exec(req *mof.ReqContext, res *mof.ResContext) error 
 	}
 	return nil
 }
-func (s CommonDeleteBatch) GetRule() mof.RuleRegister {
-	return mof.RuleRegister{Code: "delete_batch", Owner: "common"}
+func (s CommonDeleteBatch) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "delete_batch", Owner: "common"}
 }

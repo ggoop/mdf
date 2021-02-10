@@ -6,7 +6,6 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
 )
 
 type CommonEnable struct {
@@ -16,7 +15,7 @@ type CommonEnable struct {
 func NewCommonEnable(repo *repositories.MysqlRepo) *CommonEnable {
 	return &CommonEnable{repo}
 }
-func (s CommonEnable) Exec(req *mof.ReqContext, res *mof.ResContext) error {
+func (s CommonEnable) Exec(req *md.ReqContext, res *md.ResContext) error {
 	if req.ID == "" {
 		return glog.Error("缺少 ID 参数！")
 	}
@@ -30,6 +29,6 @@ func (s CommonEnable) Exec(req *mof.ReqContext, res *mof.ResContext) error {
 	}
 	return nil
 }
-func (s CommonEnable) GetRule() mof.RuleRegister {
-	return mof.RuleRegister{Code: "enable", Owner: "common"}
+func (s CommonEnable) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "enable", Owner: "common"}
 }

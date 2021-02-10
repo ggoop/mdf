@@ -7,8 +7,6 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
-	"github.com/ggoop/mdf/framework/query"
 	"github.com/ggoop/mdf/utils"
 )
 
@@ -19,7 +17,7 @@ type CommonSave struct {
 func NewCommonSave(repo *repositories.MysqlRepo) *CommonSave {
 	return &CommonSave{repo}
 }
-func (s *CommonSave) Exec(req *mof.ReqContext, res *mof.ResContext) error {
+func (s *CommonSave) Exec(req *md.ReqContext, res *md.ResContext) error {
 	reqData := make(map[string]interface{})
 	if data, ok := req.Data.(map[string]interface{}); !ok {
 		return glog.Error("data数据格式不正确")
@@ -44,7 +42,7 @@ func (s *CommonSave) Exec(req *mof.ReqContext, res *mof.ResContext) error {
 	//如果有ID，则为修改保存
 	if req.ID != "" {
 		oldData := make(map[string]interface{})
-		exector := query.NewExector(entity.TableName)
+		exector := md.NewExector(entity.TableName)
 		for _, f := range entity.Fields {
 			if f.TypeType == md.TYPE_SIMPLE {
 				exector.Select(f.Code)
@@ -115,7 +113,7 @@ func (s *CommonSave) dataToEntityData(entity *md.MDEntity, data map[string]inter
 	}
 	return changeData
 }
-func (s *CommonSave) doActionCreate(req *mof.ReqContext, res *mof.ResContext, entity *md.MDEntity, reqData map[string]interface{}) error {
+func (s *CommonSave) doActionCreate(req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, reqData map[string]interface{}) error {
 	reqData["id"] = utils.GUID()
 	if sysField := entity.GetField("EntID"); sysField != nil && req.EntID != "" {
 		reqData[sysField.DbName] = req.EntID
@@ -143,7 +141,7 @@ func (s *CommonSave) doActionCreate(req *mof.ReqContext, res *mof.ResContext, en
 		return err
 	}
 	//执行前实体规则
-	if wr, ok := mof.GetActionRule(entity.ID, "before_save"); ok {
+	if wr, ok := md.GetActionRule(entity.ID, "before_save"); ok {
 		req.Data = changeData
 		if err := wr.Exec(req, res); err != nil {
 			return err
@@ -204,7 +202,7 @@ func (s *CommonSave) doActionCreate(req *mof.ReqContext, res *mof.ResContext, en
 	}
 
 	//执行保存后规则
-	if wr, ok := mof.GetActionRule(entity.ID, "after_save"); ok {
+	if wr, ok := md.GetActionRule(entity.ID, "after_save"); ok {
 		req.Data = changeData
 		if err := wr.Exec(req, res); err != nil {
 			return err
@@ -213,7 +211,7 @@ func (s *CommonSave) doActionCreate(req *mof.ReqContext, res *mof.ResContext, en
 	res.SetData("data", changeData)
 	return nil
 }
-func (s *CommonSave) doActionUpdate(req *mof.ReqContext, res *mof.ResContext, entity *md.MDEntity, reqData map[string]interface{}, oldData map[string]interface{}) error {
+func (s *CommonSave) doActionUpdate(req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, reqData map[string]interface{}, oldData map[string]interface{}) error {
 	fieldUpdatedAt := entity.GetField("UpdatedAt")
 	if fieldUpdatedAt != nil && fieldUpdatedAt.DbName != "" {
 		reqData[fieldUpdatedAt.DbName] = utils.NewTime()
@@ -269,7 +267,7 @@ func (s *CommonSave) doActionUpdate(req *mof.ReqContext, res *mof.ResContext, en
 	}
 	if len(changeData) > 0 {
 		//执行前实体规则
-		if wr, ok := mof.GetActionRule(entity.ID, "before_save"); ok {
+		if wr, ok := md.GetActionRule(entity.ID, "before_save"); ok {
 			req.Data = changeData
 			if err := wr.Exec(req, res); err != nil {
 				return err
@@ -322,7 +320,7 @@ func (s *CommonSave) doActionUpdate(req *mof.ReqContext, res *mof.ResContext, en
 		}
 
 		//执行保存后规则
-		if wr, ok := mof.GetActionRule(entity.ID, "after_save"); ok {
+		if wr, ok := md.GetActionRule(entity.ID, "after_save"); ok {
 			req.Data = changeData
 			if err := wr.Exec(req, res); err != nil {
 				return err
@@ -333,7 +331,7 @@ func (s *CommonSave) doActionUpdate(req *mof.ReqContext, res *mof.ResContext, en
 	return nil
 }
 
-func (s *CommonSave) saveRelationData(req *mof.ReqContext, res *mof.ResContext, entity *md.MDEntity, reqData map[string]interface{}) error {
+func (s *CommonSave) saveRelationData(req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, reqData map[string]interface{}) error {
 	for _, nv := range entity.Fields {
 		if nv.Kind == md.KIND_TYPE_HAS_MANT {
 			if do, ok := reqData[nv.DbName].([]interface{}); ok && len(do) > 0 {
@@ -378,7 +376,7 @@ func (s *CommonSave) saveRelationData(req *mof.ReqContext, res *mof.ResContext, 
 						newReq.Entity = refEntity.ID
 						newReq.Rule = ruleID
 
-						if _, err := mof.DoAction(newReq); err != nil {
+						if _, err := md.DoAction(newReq); err != nil {
 							return err
 						}
 					}
@@ -389,9 +387,9 @@ func (s *CommonSave) saveRelationData(req *mof.ReqContext, res *mof.ResContext, 
 	}
 	return nil
 }
-func (s *CommonSave) dataCheck(req *mof.ReqContext, res *mof.ResContext, entity *md.MDEntity, data map[string]interface{}) error {
+func (s *CommonSave) dataCheck(req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, data map[string]interface{}) error {
 	return nil
 }
-func (s *CommonSave) GetRule() mof.RuleRegister {
-	return mof.RuleRegister{Code: "save", Owner: "common"}
+func (s *CommonSave) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "save", Owner: "common"}
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/ggoop/mdf/framework/files"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/query"
 	"github.com/ggoop/mdf/utils"
 )
 
@@ -22,28 +21,28 @@ type QuerySv struct {
 func NewQuerySv(repo *repositories.MysqlRepo) *QuerySv {
 	return &QuerySv{repo: repo}
 }
-func (s *QuerySv) GetQuery(queryIDOrCode string) (*query.Query, error) {
-	q := query.Query{}
+func (s *QuerySv) GetQuery(queryIDOrCode string) (*md.Query, error) {
+	q := md.Query{}
 	if err := s.repo.Preload("Columns").Preload("Orders").Preload("Wheres").Preload("Filters").Where("id=? or code=?", queryIDOrCode, queryIDOrCode).Take(&q).Error; err != nil {
 		return nil, err
 	}
 	return &q, nil
 }
-func (s *QuerySv) AddQueries(item []query.Query) error {
+func (s *QuerySv) AddQueries(item []md.Query) error {
 	for _, item := range item {
 		s.SaveQuery(model.SYS_ENT_ID, item, true)
 	}
 	return nil
 }
 
-func (s *QuerySv) SaveQuery(entID string, item query.Query, reInit bool) (*query.Query, error) {
+func (s *QuerySv) SaveQuery(entID string, item md.Query, reInit bool) (*md.Query, error) {
 	if !utils.StringIsCode(item.Code) {
 		return nil, errors.CodeError(item.Code)
 	}
 	if item.Type == "" {
 		item.Type = md.TYPE_ENTITY
 	}
-	old := query.Query{}
+	old := md.Query{}
 	s.repo.Where("id=? or code=?", item.ID, item.Code).Take(&old)
 	if old.ID != "" {
 		item.ID = old.ID
@@ -79,7 +78,7 @@ func (s *QuerySv) SaveQuery(entID string, item query.Query, reInit bool) (*query
 		s.repo.Create(&item)
 	}
 	{
-		items := make([]query.QueryFilter, 0)
+		items := make([]md.QueryFilter, 0)
 		items = append(items, item.Filters...)
 		for _, d := range item.Wheres {
 			for _, f := range d.Filters {
@@ -94,14 +93,14 @@ func (s *QuerySv) SaveQuery(entID string, item query.Query, reInit bool) (*query
 	s.saveQueryOrders(item.ID, item.ID, "query", item.Orders, reInit)
 	return nil, nil
 }
-func (s *QuerySv) saveQueryFilters(queryID string, items []query.QueryFilter, reInit bool) {
+func (s *QuerySv) saveQueryFilters(queryID string, items []md.QueryFilter, reInit bool) {
 	itemNames := make([]string, 0)
 	for i, ditem := range items {
 		if ditem.Sequence == 0 {
 			ditem.Sequence = i
 		}
 		itemNames = append(itemNames, fmt.Sprintf("%s:%s", ditem.OwnerField, ditem.Field))
-		oldItem := query.QueryFilter{}
+		oldItem := md.QueryFilter{}
 		if s.repo.Where("query_id=? and owner_field=? and field=?", queryID, ditem.OwnerField, ditem.Field).Take(&oldItem); oldItem.ID == "" {
 			ditem.ID = utils.GUID()
 			ditem.QueryID = queryID
@@ -136,20 +135,20 @@ func (s *QuerySv) saveQueryFilters(queryID string, items []query.QueryFilter, re
 	}
 	if reInit {
 		if len(itemNames) > 0 {
-			s.repo.Delete(query.QueryFilter{}, "query_id=? and concat(owner_field,':',field) not in (?)", queryID, itemNames)
+			s.repo.Delete(md.QueryFilter{}, "query_id=? and concat(owner_field,':',field) not in (?)", queryID, itemNames)
 		} else {
-			s.repo.Delete(query.QueryFilter{}, "query_id=?", queryID)
+			s.repo.Delete(md.QueryFilter{}, "query_id=?", queryID)
 		}
 	}
 }
-func (s *QuerySv) saveQueryOrders(queryID, ownerID, ownerType string, items []query.QueryOrder, reInit bool) {
+func (s *QuerySv) saveQueryOrders(queryID, ownerID, ownerType string, items []md.QueryOrder, reInit bool) {
 	itemNames := make([]string, 0)
 	for i, d := range items {
 		if d.Sequence == 0 {
 			d.Sequence = i
 		}
 		itemNames = append(itemNames, d.Field)
-		f := query.QueryOrder{}
+		f := md.QueryOrder{}
 		if s.repo.Where("owner_id=? and field=?", ownerID, d.Field).Take(&f); f.ID == "" {
 			d.ID = utils.GUID()
 			d.QueryID = queryID
@@ -196,27 +195,27 @@ func (s *QuerySv) saveQueryOrders(queryID, ownerID, ownerType string, items []qu
 	if reInit {
 		if ownerType == "query" {
 			if len(itemNames) > 0 {
-				s.repo.Delete(query.QueryOrder{}, "query_id=? and field not in (?)", queryID, itemNames)
+				s.repo.Delete(md.QueryOrder{}, "query_id=? and field not in (?)", queryID, itemNames)
 			} else {
-				s.repo.Delete(query.QueryOrder{}, "query_id=?", queryID)
+				s.repo.Delete(md.QueryOrder{}, "query_id=?", queryID)
 			}
 		} else {
 			if len(itemNames) > 0 {
-				s.repo.Delete(query.QueryOrder{}, "owner_id=? and field not in (?)", ownerID, itemNames)
+				s.repo.Delete(md.QueryOrder{}, "owner_id=? and field not in (?)", ownerID, itemNames)
 			} else {
-				s.repo.Delete(query.QueryOrder{}, "owner_id=?", ownerID)
+				s.repo.Delete(md.QueryOrder{}, "owner_id=?", ownerID)
 			}
 		}
 	}
 }
-func (s *QuerySv) saveQueryColumns(queryID, ownerID, ownerType string, items []query.QueryColumn, reInit bool) {
+func (s *QuerySv) saveQueryColumns(queryID, ownerID, ownerType string, items []md.QueryColumn, reInit bool) {
 	itemNames := make([]string, 0)
 	for i, d := range items {
 		if d.Sequence == 0 {
 			d.Sequence = i + 1
 		}
 		itemNames = append(itemNames, d.Field)
-		f := query.QueryColumn{}
+		f := md.QueryColumn{}
 		if s.repo.Where("owner_id=? and field=?", ownerID, d.Field).Take(&f); f.ID == "" {
 			d.ID = utils.GUID()
 			d.OwnerID = ownerID
@@ -285,27 +284,27 @@ func (s *QuerySv) saveQueryColumns(queryID, ownerID, ownerType string, items []q
 	if reInit {
 		if ownerType == "query" {
 			if len(itemNames) > 0 {
-				s.repo.Delete(query.QueryColumn{}, "query_id=? and field not in (?)", queryID, itemNames)
+				s.repo.Delete(md.QueryColumn{}, "query_id=? and field not in (?)", queryID, itemNames)
 			} else {
-				s.repo.Delete(query.QueryColumn{}, "query_id=?", queryID)
+				s.repo.Delete(md.QueryColumn{}, "query_id=?", queryID)
 			}
 		} else {
 			if len(itemNames) > 0 {
-				s.repo.Delete(query.QueryColumn{}, "owner_id=? and field not in (?)", ownerID, itemNames)
+				s.repo.Delete(md.QueryColumn{}, "owner_id=? and field not in (?)", ownerID, itemNames)
 			} else {
-				s.repo.Delete(query.QueryColumn{}, "owner_id=?", ownerID)
+				s.repo.Delete(md.QueryColumn{}, "owner_id=?", ownerID)
 			}
 		}
 	}
 }
-func (s *QuerySv) saveQueryWheres(queryID, ownerID, ownerType string, items []query.QueryWhere, reInit bool) {
+func (s *QuerySv) saveQueryWheres(queryID, ownerID, ownerType string, items []md.QueryWhere, reInit bool) {
 	itemNames := make([]string, 0)
 	for i, d := range items {
 		if d.Sequence == 0 {
 			d.Sequence = i
 		}
 		itemNames = append(itemNames, d.Field)
-		f := query.QueryWhere{}
+		f := md.QueryWhere{}
 		if s.repo.Where("owner_id=? and field=?", ownerID, d.Field).Take(&f); f.ID == "" {
 			d.ID = utils.GUID()
 			d.QueryID = queryID
@@ -365,22 +364,22 @@ func (s *QuerySv) saveQueryWheres(queryID, ownerID, ownerType string, items []qu
 		if ownerType == "query" {
 			if len(itemNames) > 0 {
 				if len(itemNames) > 0 {
-					s.repo.Delete(query.QueryWhere{}, "query_id=? and field not in (?)", queryID, itemNames)
+					s.repo.Delete(md.QueryWhere{}, "query_id=? and field not in (?)", queryID, itemNames)
 				} else {
-					s.repo.Delete(query.QueryWhere{}, "query_id=?", queryID)
+					s.repo.Delete(md.QueryWhere{}, "query_id=?", queryID)
 				}
 			}
 		} else {
 			if len(itemNames) > 0 {
-				s.repo.Delete(query.QueryWhere{}, "owner_id=? and field not in (?)", ownerID, itemNames)
+				s.repo.Delete(md.QueryWhere{}, "owner_id=? and field not in (?)", ownerID, itemNames)
 			} else {
-				s.repo.Delete(query.QueryWhere{}, "owner_id=?", ownerID)
+				s.repo.Delete(md.QueryWhere{}, "owner_id=?", ownerID)
 			}
 		}
 	}
 }
-func (s *QuerySv) SaveCase(entID, queryID string, item query.QueryCase) (*query.QueryCase, error) {
-	old := query.QueryCase{}
+func (s *QuerySv) SaveCase(entID, queryID string, item md.QueryCase) (*md.QueryCase, error) {
+	old := md.QueryCase{}
 	if item.ID != "" {
 		s.repo.Where("ent_id=?", entID).Where("id=?", item.ID).Take(&old)
 	}
@@ -425,7 +424,7 @@ func (s *QuerySv) SaveCase(entID, queryID string, item query.QueryCase) (*query.
 	if item.IsDefault.Valid() && item.IsDefault.IsTrue() {
 		updates := make(map[string]interface{})
 		updates["IsDefault"] = utils.SBool_False
-		if err := s.repo.Model(query.QueryCase{}).Where("ent_id=? and query_id=? and user_id=? and id!=?", entID, queryID, item.UserID, item.ID).Updates(updates).Error; err != nil {
+		if err := s.repo.Model(md.QueryCase{}).Where("ent_id=? and query_id=? and user_id=? and id!=?", entID, queryID, item.UserID, item.ID).Updates(updates).Error; err != nil {
 			glog.Error(err)
 		}
 	}
@@ -435,8 +434,8 @@ func (s *QuerySv) SaveCase(entID, queryID string, item query.QueryCase) (*query.
 	s.saveQueryOrders(item.QueryID, item.ID, "case", item.Orders, true)
 	return s.GetCase(entID, queryID, item.ID)
 }
-func (s *QuerySv) GetCases(entID, userID, queryID string, scopeTypes ...string) ([]query.QueryCase, error) {
-	items := make([]query.QueryCase, 0)
+func (s *QuerySv) GetCases(entID, userID, queryID string, scopeTypes ...string) ([]md.QueryCase, error) {
+	items := make([]md.QueryCase, 0)
 	queryItem, err := s.GetQuery(queryID)
 	if err != nil {
 		return nil, err
@@ -448,12 +447,12 @@ func (s *QuerySv) GetCases(entID, userID, queryID string, scopeTypes ...string) 
 	}
 	return items, nil
 }
-func (s *QuerySv) GetDefaultCase(entID, userID, queryID, caseID string) (*query.QueryCase, error) {
+func (s *QuerySv) GetDefaultCase(entID, userID, queryID, caseID string) (*md.QueryCase, error) {
 	queryItem, err := s.GetQuery(queryID)
 	if err != nil {
 		return nil, err
 	}
-	caseItem := query.QueryCase{}
+	caseItem := md.QueryCase{}
 
 	q := s.repo.Preload("Columns").Preload("Orders").Preload("Wheres").Preload("Filters")
 	//依据查询方案精确查询
@@ -473,8 +472,8 @@ func (s *QuerySv) GetDefaultCase(entID, userID, queryID, caseID string) (*query.
 	}
 	return &caseItem, nil
 }
-func (s *QuerySv) queryToCase(q *query.Query) query.QueryCase {
-	caseItem := query.QueryCase{}
+func (s *QuerySv) queryToCase(q *md.Query) md.QueryCase {
+	caseItem := md.QueryCase{}
 	caseItem.ScopeType = "sys"
 	caseItem.CreatedAt = q.CreatedAt
 	caseItem.UpdatedAt = q.UpdatedAt
@@ -503,12 +502,12 @@ func (s *QuerySv) queryToCase(q *query.Query) query.QueryCase {
 }
 
 //依据查询，获取查询方案
-func (s *QuerySv) GetCase(entID, queryID, caseID string, preloads ...string) (*query.QueryCase, error) {
+func (s *QuerySv) GetCase(entID, queryID, caseID string, preloads ...string) (*md.QueryCase, error) {
 	queryItem, err := s.GetQuery(queryID)
 	if err != nil {
 		return nil, err
 	}
-	old := query.QueryCase{}
+	old := md.QueryCase{}
 	if caseID != "0" && caseID != "" {
 		if err := s.repo.Preload("Columns").Preload("Orders").Preload("Wheres").Preload("Filters").Where("ent_id=?", entID).Where("id=?", caseID).Take(&old).Error; err != nil {
 			return nil, err
@@ -520,7 +519,7 @@ func (s *QuerySv) GetCase(entID, queryID, caseID string, preloads ...string) (*q
 	return &old, nil
 }
 func (s *QuerySv) DeleteCases(entID, userID, queryID string, caseIDs []string) error {
-	if err := s.repo.Where("ent_id=?", entID).Where("id in (?)", caseIDs).Delete(query.QueryCase{}).Error; err != nil {
+	if err := s.repo.Where("ent_id=?", entID).Where("id in (?)", caseIDs).Delete(md.QueryCase{}).Error; err != nil {
 		return err
 	}
 	return nil
@@ -537,11 +536,11 @@ func (s *QuerySv) BatchImport(entID string, datas []files.ImportData) error {
 	nameList["filters"] = 5
 	sort.Slice(datas, func(i, j int) bool { return nameList[datas[i].Name] < nameList[datas[j].Name] })
 
-	qitems := make([]query.Query, 0)
-	qwheres := make([]query.QueryWhere, 0)
-	qcolumns := make([]query.QueryColumn, 0)
-	qorders := make([]query.QueryOrder, 0)
-	qfilters := make([]query.QueryFilter, 0)
+	qitems := make([]md.Query, 0)
+	qwheres := make([]md.QueryWhere, 0)
+	qcolumns := make([]md.QueryColumn, 0)
+	qorders := make([]md.QueryOrder, 0)
+	qfilters := make([]md.QueryFilter, 0)
 	for _, item := range datas {
 		if strings.ToLower(item.Name) == "queries" {
 			if d, err := s.importDataToQueries(entID, item); err != nil {
@@ -608,13 +607,13 @@ func (s *QuerySv) BatchImport(entID string, datas []files.ImportData) error {
 	}
 	return nil
 }
-func (s *QuerySv) importDataToQueries(entID string, data files.ImportData) ([]query.Query, error) {
+func (s *QuerySv) importDataToQueries(entID string, data files.ImportData) ([]md.Query, error) {
 	if len(data.Datas) == 0 {
 		return nil, nil
 	}
-	items := make([]query.Query, 0)
+	items := make([]md.Query, 0)
 	for _, row := range data.Datas {
-		item := query.Query{}
+		item := md.Query{}
 		if cValue := files.GetMapStringValue("ID", row); cValue != "" {
 			item.ID = cValue
 		} else {
@@ -643,13 +642,13 @@ func (s *QuerySv) importDataToQueries(entID string, data files.ImportData) ([]qu
 	}
 	return items, nil
 }
-func (s *QuerySv) importDataToWheres(entID string, data files.ImportData) ([]query.QueryWhere, error) {
+func (s *QuerySv) importDataToWheres(entID string, data files.ImportData) ([]md.QueryWhere, error) {
 	if len(data.Datas) == 0 {
 		return nil, nil
 	}
-	items := make([]query.QueryWhere, 0)
+	items := make([]md.QueryWhere, 0)
 	for _, row := range data.Datas {
-		item := query.QueryWhere{}
+		item := md.QueryWhere{}
 		if cValue := files.GetMapStringValue("OwnerID", row); cValue != "" {
 			item.OwnerID = cValue
 		} else {
@@ -692,13 +691,13 @@ func (s *QuerySv) importDataToWheres(entID string, data files.ImportData) ([]que
 	}
 	return items, nil
 }
-func (s *QuerySv) importDataToColumns(entID string, data files.ImportData) ([]query.QueryColumn, error) {
+func (s *QuerySv) importDataToColumns(entID string, data files.ImportData) ([]md.QueryColumn, error) {
 	if len(data.Datas) == 0 {
 		return nil, nil
 	}
-	items := make([]query.QueryColumn, 0)
+	items := make([]md.QueryColumn, 0)
 	for _, row := range data.Datas {
-		item := query.QueryColumn{}
+		item := md.QueryColumn{}
 		if cValue := files.GetMapStringValue("OwnerID", row); cValue != "" {
 			item.OwnerID = cValue
 		} else {
@@ -744,13 +743,13 @@ func (s *QuerySv) importDataToColumns(entID string, data files.ImportData) ([]qu
 	return items, nil
 }
 
-func (s *QuerySv) importDataToOrders(entID string, data files.ImportData) ([]query.QueryOrder, error) {
+func (s *QuerySv) importDataToOrders(entID string, data files.ImportData) ([]md.QueryOrder, error) {
 	if len(data.Datas) == 0 {
 		return nil, nil
 	}
-	items := make([]query.QueryOrder, 0)
+	items := make([]md.QueryOrder, 0)
 	for _, row := range data.Datas {
-		item := query.QueryOrder{}
+		item := md.QueryOrder{}
 		if cValue := files.GetMapStringValue("OwnerID", row); cValue != "" {
 			item.OwnerID = cValue
 		} else {
@@ -784,13 +783,13 @@ func (s *QuerySv) importDataToOrders(entID string, data files.ImportData) ([]que
 	return items, nil
 }
 
-func (s *QuerySv) importDataToFilters(entID string, data files.ImportData) ([]query.QueryFilter, error) {
+func (s *QuerySv) importDataToFilters(entID string, data files.ImportData) ([]md.QueryFilter, error) {
 	if len(data.Datas) == 0 {
 		return nil, nil
 	}
-	items := make([]query.QueryFilter, 0)
+	items := make([]md.QueryFilter, 0)
 	for _, row := range data.Datas {
-		item := query.QueryFilter{}
+		item := md.QueryFilter{}
 		if cValue := files.GetMapStringValue("QueryID", row); cValue != "" {
 			item.QueryID = cValue
 		} else {

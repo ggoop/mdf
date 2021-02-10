@@ -6,7 +6,6 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
 	"github.com/ggoop/mdf/utils"
 )
 
@@ -17,7 +16,7 @@ type CommonDelete struct {
 func NewCommonDelete(repo *repositories.MysqlRepo) *CommonDelete {
 	return &CommonDelete{repo}
 }
-func (s CommonDelete) Exec(req *mof.ReqContext, res *mof.ResContext) error {
+func (s CommonDelete) Exec(req *md.ReqContext, res *md.ResContext) error {
 	if req.ID == "" {
 		return glog.Error("缺少 ID 参数！")
 	}
@@ -44,6 +43,6 @@ func (s CommonDelete) Exec(req *mof.ReqContext, res *mof.ResContext) error {
 	}
 	return nil
 }
-func (s CommonDelete) GetRule() mof.RuleRegister {
-	return mof.RuleRegister{Code: "delete", Owner: "common"}
+func (s CommonDelete) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "delete", Owner: "common"}
 }

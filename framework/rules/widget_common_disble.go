@@ -6,7 +6,6 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
 )
 
 type CommonDisable struct {
@@ -16,7 +15,7 @@ type CommonDisable struct {
 func NewCommonDisable(repo *repositories.MysqlRepo) *CommonDisable {
 	return &CommonDisable{repo}
 }
-func (s CommonDisable) Exec(req *mof.ReqContext, res *mof.ResContext) error {
+func (s CommonDisable) Exec(req *md.ReqContext, res *md.ResContext) error {
 	if req.ID == "" {
 		return glog.Error("缺少 ID 参数！")
 	}
@@ -30,6 +29,6 @@ func (s CommonDisable) Exec(req *mof.ReqContext, res *mof.ResContext) error {
 	}
 	return nil
 }
-func (s CommonDisable) GetRule() mof.RuleRegister {
-	return mof.RuleRegister{Code: "disable", Owner: "common"}
+func (s CommonDisable) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "disable", Owner: "common"}
 }

@@ -4,14 +4,14 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/di"
 	"github.com/ggoop/mdf/framework/glog"
-	"github.com/ggoop/mdf/framework/mof"
+	"github.com/ggoop/mdf/framework/md"
 )
 
 func Register() {
 
 	//注册到mof框架
 	if err := di.Global.Invoke(func(repo *repositories.MysqlRepo) {
-		mof.RegisterActionRule(
+		md.RegisterActionRule(
 			NewCommonLoad(repo),
 			NewCommonQuery(repo),
 			NewCommonSave(repo),

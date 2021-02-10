@@ -1,4 +1,4 @@
-package query
+package md
 
 import (
 	"fmt"
@@ -9,12 +9,11 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/di"
 	"github.com/ggoop/mdf/framework/glog"
-	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 )
 
 type QueryCase struct {
-	md.Model
+	Model
 	EntID     string          `gorm:"size:50" json:"ent_id"`
 	UserID    string          `gorm:"size:50" json:"user_id"`
 	QueryID   string          `gorm:"size:50;name:查询" json:"query_id"`
@@ -36,8 +35,8 @@ type QueryCase struct {
 	Q         string          `gorm:"size:200;name:关键字" json:"q"`        //关键字
 }
 
-func (s *QueryCase) MD() *md.Mder {
-	return &md.Mder{ID: "query.case", Name: "查询方案"}
+func (s *QueryCase) MD() *Mder {
+	return &Mder{ID: "query.case", Name: "查询方案"}
 }
 func (s *QueryCase) prepareCase() {
 	if s.Query == nil && s.QueryID != "" {

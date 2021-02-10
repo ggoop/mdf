@@ -6,7 +6,6 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
 )
 
 type CommonDisableBatch struct {
@@ -16,7 +15,7 @@ type CommonDisableBatch struct {
 func NewCommonDisableBatch(repo *repositories.MysqlRepo) *CommonDisableBatch {
 	return &CommonDisableBatch{repo}
 }
-func (s CommonDisableBatch) Exec(req *mof.ReqContext, res *mof.ResContext) error {
+func (s CommonDisableBatch) Exec(req *md.ReqContext, res *md.ResContext) error {
 	if len(req.IDS) == 0 {
 		return glog.Error("缺少 ID 参数！")
 	}
@@ -30,6 +29,6 @@ func (s CommonDisableBatch) Exec(req *mof.ReqContext, res *mof.ResContext) error
 	}
 	return nil
 }
-func (s CommonDisableBatch) GetRule() mof.RuleRegister {
-	return mof.RuleRegister{Code: "disable_batch", Owner: "common"}
+func (s CommonDisableBatch) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "disable_batch", Owner: "common"}
 }

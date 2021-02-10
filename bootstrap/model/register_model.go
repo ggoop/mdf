@@ -5,7 +5,6 @@ import (
 	"github.com/ggoop/mdf/framework/di"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/query"
 )
 
 // 注册数据模型,提供数据层，按模块注册数据模型
@@ -29,7 +28,7 @@ func RegisterMD() {
 		//dti
 		md.Migrate(db, &DtiLocal{}, &DtiLocalParam{}, &DtiNode{}, &DtiParam{}, &DtiRemote{})
 		//query
-		md.Migrate(db, &query.Query{}, &query.QueryFilter{}, &query.QueryColumn{}, &query.QueryOrder{}, &query.QueryWhere{}, &query.QueryCase{})
+		md.Migrate(db, &md.Query{}, &md.QueryFilter{}, &md.QueryColumn{}, &md.QueryOrder{}, &md.QueryWhere{}, &md.QueryCase{})
 
 	}); err != nil {
 		glog.Errorf("di Provide error:%s", err)

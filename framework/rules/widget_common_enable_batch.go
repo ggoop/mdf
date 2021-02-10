@@ -6,7 +6,6 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
 )
 
 type CommonEnableBatch struct {
@@ -16,7 +15,7 @@ type CommonEnableBatch struct {
 func NewCommonEnableBatch(repo *repositories.MysqlRepo) *CommonEnableBatch {
 	return &CommonEnableBatch{repo}
 }
-func (s CommonEnableBatch) Exec(req *mof.ReqContext, res *mof.ResContext) error {
+func (s CommonEnableBatch) Exec(req *md.ReqContext, res *md.ResContext) error {
 	if len(req.IDS) == 0 {
 		return glog.Error("缺少 ID 参数！")
 	}
@@ -30,6 +29,6 @@ func (s CommonEnableBatch) Exec(req *mof.ReqContext, res *mof.ResContext) error 
 	}
 	return nil
 }
-func (s CommonEnableBatch) GetRule() mof.RuleRegister {
-	return mof.RuleRegister{Code: "enable_batch", Owner: "common"}
+func (s CommonEnableBatch) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "enable_batch", Owner: "common"}
 }

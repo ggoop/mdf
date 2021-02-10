@@ -9,7 +9,7 @@ import (
 	"github.com/ggoop/mdf/framework/files"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/http/results"
-	"github.com/ggoop/mdf/framework/mof"
+	"github.com/ggoop/mdf/framework/md"
 )
 
 type DevController struct {
@@ -24,7 +24,7 @@ func (c *DevController) PostWidgetImport() results.Result {
 	if err := ctx.Valid(true, false); err != nil {
 		glog.Error(err)
 	}
-	var postInput mof.ReqContext
+	var postInput md.ReqContext
 	if err := c.Ctx.ReadForm(&postInput); err != nil {
 		c.Ctx.ReadJSON(&postInput)
 	}
@@ -44,9 +44,9 @@ func (c *DevController) PostWidgetImport() results.Result {
 	if postInput.EntID == "" {
 		postInput.EntID = ctx.EntID()
 	}
-	postInput.Command = "import"
+	postInput.Action = "import"
 	postInput.UserID = ctx.UserID()
-	if rtn, err := c.MdSv.DoAction(postInput); err != nil {
+	if rtn := c.MdSv.DoAction(postInput); rtn.Error != nil {
 		return results.ToError(err)
 	} else {
 		return results.ToJson(rtn)

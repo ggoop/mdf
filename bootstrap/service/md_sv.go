@@ -10,8 +10,6 @@ import (
 	"github.com/ggoop/mdf/framework/files"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
-	"github.com/ggoop/mdf/framework/query"
 	"github.com/ggoop/mdf/utils"
 )
 
@@ -69,15 +67,15 @@ func (s *MdSv) GetPage(page string) (md.MDWidget, error) {
 	}
 	return pageMD, nil
 }
-func (s *MdSv) GetPageInfo(req mof.ReqContext) (interface{}, error) {
+func (s *MdSv) GetPageInfo(req md.ReqContext) (interface{}, error) {
 	return nil, nil
 }
-func (s *MdSv) TakeDataByQ(req mof.ReqContext) (map[string]interface{}, error) {
+func (s *MdSv) TakeDataByQ(req md.ReqContext) (map[string]interface{}, error) {
 	entity := md.GetEntity(req.Entity)
 	if entity == nil {
 		return nil, nil
 	}
-	exector := query.NewExector(entity.TableName)
+	exector := md.NewExector(entity.TableName)
 	codeField := &md.MDField{}
 	nameField := &md.MDField{}
 	entField := &md.MDField{}
@@ -133,8 +131,8 @@ func (s *MdSv) TakeDataByQ(req mof.ReqContext) (map[string]interface{}, error) {
 }
 
 //执行命令
-func (s *MdSv) DoAction(req mof.ReqContext) (interface{}, error) {
-	return mof.DoAction(req)
+func (s *MdSv) DoAction(req md.ReqContext) md.ResContext {
+	return md.DoAction(req)
 }
 func (s *MdSv) BatchImport(entID string, datas []files.ImportData) error {
 	if len(datas) > 0 {
@@ -167,7 +165,7 @@ func (s *MdSv) BatchImport(entID string, datas []files.ImportData) error {
 			}
 		}
 
-		mofSv := mof.NewMOFSv(s.repo)
+		mofSv := md.NewMDSv(s.repo)
 		if len(entities) > 0 {
 			for i, entity := range entities {
 				for _, field := range fields {

@@ -1,23 +1,22 @@
-package mof
+package md
 
 import (
 	"fmt"
 
-	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 )
 
-func (s *MOFSv) buildColumnNameString4Oracle(item md.MDField) string {
+func (s *MDSv) buildColumnNameString4Oracle(item MDField) string {
 	fieldStr := s.quote(item.DbName)
 	nullable := item.Nullable
 
-	if item.IsPrimaryKey.IsTrue() && item.TypeID == md.FIELD_TYPE_STRING {
+	if item.IsPrimaryKey.IsTrue() && item.TypeID == FIELD_TYPE_STRING {
 		fieldStr += " VARCHAR2(36)"
 		nullable = utils.SBool_False
-	} else if item.IsPrimaryKey.IsTrue() && item.TypeID == md.FIELD_TYPE_INT {
+	} else if item.IsPrimaryKey.IsTrue() && item.TypeID == FIELD_TYPE_INT {
 		fieldStr += " NUMBER"
 		nullable = utils.SBool_False
-	} else if item.TypeID == md.FIELD_TYPE_STRING {
+	} else if item.TypeID == FIELD_TYPE_STRING {
 		if item.Length <= 0 {
 			item.Length = 50
 		}
@@ -29,7 +28,7 @@ func (s *MOFSv) buildColumnNameString4Oracle(item md.MDField) string {
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
 		}
-	} else if item.TypeID == md.FIELD_TYPE_BOOL {
+	} else if item.TypeID == FIELD_TYPE_BOOL {
 		fieldStr += " NUMBER(1,0)"
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
@@ -37,12 +36,12 @@ func (s *MOFSv) buildColumnNameString4Oracle(item md.MDField) string {
 			fieldStr += " DEFAULT 0"
 		}
 		nullable = utils.SBool_False
-	} else if item.TypeID == md.FIELD_TYPE_DATE || item.TypeID == md.FIELD_TYPE_DATETIME {
+	} else if item.TypeID == FIELD_TYPE_DATE || item.TypeID == FIELD_TYPE_DATETIME {
 		fieldStr += " TIMESTAMP"
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
 		}
-	} else if item.TypeID == md.FIELD_TYPE_DECIMAL {
+	} else if item.TypeID == FIELD_TYPE_DECIMAL {
 		fieldStr += " NUMBER(24,9)"
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
@@ -50,7 +49,7 @@ func (s *MOFSv) buildColumnNameString4Oracle(item md.MDField) string {
 			fieldStr += " DEFAULT 0"
 		}
 		nullable = utils.SBool_False
-	} else if item.TypeID == md.FIELD_TYPE_INT {
+	} else if item.TypeID == FIELD_TYPE_INT {
 		fieldStr += " INTEGER"
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
@@ -58,7 +57,7 @@ func (s *MOFSv) buildColumnNameString4Oracle(item md.MDField) string {
 			fieldStr += " DEFAULT 0"
 		}
 		nullable = utils.SBool_False
-	} else if item.TypeType == md.TYPE_ENTITY || item.TypeType == md.TYPE_ENUM {
+	} else if item.TypeType == TYPE_ENTITY || item.TypeType == TYPE_ENUM {
 		fieldStr += " VARCHAR2(36)"
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
@@ -78,15 +77,15 @@ func (s *MOFSv) buildColumnNameString4Oracle(item md.MDField) string {
 	return fieldStr
 }
 
-func (s *MOFSv) buildColumnNameString4Mysql(item md.MDField) string {
+func (s *MDSv) buildColumnNameString4Mysql(item MDField) string {
 	fieldStr := s.quote(item.DbName)
-	if item.IsPrimaryKey.IsTrue() && item.TypeID == md.FIELD_TYPE_STRING {
+	if item.IsPrimaryKey.IsTrue() && item.TypeID == FIELD_TYPE_STRING {
 		fieldStr += " NVARCHAR(36)"
 		item.Nullable = utils.SBool_False
-	} else if item.IsPrimaryKey.IsTrue() && item.TypeID == md.FIELD_TYPE_INT {
+	} else if item.IsPrimaryKey.IsTrue() && item.TypeID == FIELD_TYPE_INT {
 		fieldStr += " BIGINT"
 		item.Nullable = utils.SBool_False
-	} else if item.TypeID == md.FIELD_TYPE_STRING {
+	} else if item.TypeID == FIELD_TYPE_STRING {
 		if item.Length <= 0 {
 			item.Length = 50
 		}
@@ -101,7 +100,7 @@ func (s *MOFSv) buildColumnNameString4Mysql(item md.MDField) string {
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
 		}
-	} else if item.TypeID == md.FIELD_TYPE_BOOL {
+	} else if item.TypeID == FIELD_TYPE_BOOL {
 		fieldStr += " TINYINT"
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
@@ -109,12 +108,12 @@ func (s *MOFSv) buildColumnNameString4Mysql(item md.MDField) string {
 			fieldStr += " DEFAULT 0"
 		}
 		item.Nullable = utils.SBool_False
-	} else if item.TypeID == md.FIELD_TYPE_DATE || item.TypeID == md.FIELD_TYPE_DATETIME {
+	} else if item.TypeID == FIELD_TYPE_DATE || item.TypeID == FIELD_TYPE_DATETIME {
 		fieldStr += " TIMESTAMP"
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
 		}
-	} else if item.TypeID == md.FIELD_TYPE_DECIMAL {
+	} else if item.TypeID == FIELD_TYPE_DECIMAL {
 		fieldStr += " DECIMAL(24,9)"
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue
@@ -122,7 +121,7 @@ func (s *MOFSv) buildColumnNameString4Mysql(item md.MDField) string {
 			fieldStr += " DEFAULT 0"
 		}
 		item.Nullable = utils.SBool_False
-	} else if item.TypeID == md.FIELD_TYPE_INT {
+	} else if item.TypeID == FIELD_TYPE_INT {
 		if item.Length >= 8 {
 			fieldStr += " BIGINT"
 		} else {
@@ -134,7 +133,7 @@ func (s *MOFSv) buildColumnNameString4Mysql(item md.MDField) string {
 			fieldStr += " DEFAULT 0"
 		}
 		item.Nullable = utils.SBool_False
-	} else if item.TypeType == md.TYPE_ENTITY || item.TypeType == md.TYPE_ENUM {
+	} else if item.TypeType == TYPE_ENTITY || item.TypeType == TYPE_ENUM {
 		fieldStr += " nvarchar(36)"
 		if item.DefaultValue != "" {
 			fieldStr += " DEFAULT " + item.DefaultValue

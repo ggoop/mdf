@@ -6,8 +6,6 @@ import (
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
-	"github.com/ggoop/mdf/framework/query"
 )
 
 type CommonLoad struct {
@@ -18,11 +16,11 @@ func NewCommonLoad(repo *repositories.MysqlRepo) *CommonLoad {
 	return &CommonLoad{repo}
 }
 
-func (s CommonLoad) GetRule() mof.RuleRegister {
-	return mof.RuleRegister{Code: "load", Owner: "common"}
+func (s CommonLoad) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "load", Owner: "common"}
 }
 
-func (s CommonLoad) Exec(req *mof.ReqContext, res *mof.ResContext) error {
+func (s CommonLoad) Exec(req *md.ReqContext, res *md.ResContext) error {
 	if req.ID == "" {
 		return glog.Error("缺少 ID 参数！")
 	}
@@ -31,7 +29,7 @@ func (s CommonLoad) Exec(req *mof.ReqContext, res *mof.ResContext) error {
 	if entity == nil {
 		return glog.Error("找不到实体！")
 	}
-	exector := query.NewExector(entity.TableName)
+	exector := md.NewExector(entity.TableName)
 	for _, f := range entity.Fields {
 		if f.TypeType == md.TYPE_SIMPLE {
 			exector.Select(fmt.Sprintf("$$%s as \"%s\"", f.Code, f.DbName))
@@ -67,7 +65,7 @@ func (s CommonLoad) loadEntities(data map[string]interface{}, entity *md.MDEntit
 			if fv, ok := data[f.DbName+"_id"]; ok && fv != nil && fv.(string) != "" {
 				refEntity := md.GetEntity(f.TypeID)
 				if refEntity != nil {
-					exector := query.NewExector(refEntity.TableName)
+					exector := md.NewExector(refEntity.TableName)
 					for _, f := range refEntity.Fields {
 						if f.TypeType == md.TYPE_SIMPLE {
 							exector.Select(fmt.Sprintf("$$%s as \"%s\"", f.Code, f.DbName))

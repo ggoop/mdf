@@ -1,11 +1,9 @@
-package query
+package md
 
 import (
-	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 )
 
-const md_domain string = "query"
 const (
 	//参照
 	WHERE_TYPE_REF = "ref"
@@ -26,7 +24,7 @@ const (
 )
 
 type Query struct {
-	md.Model
+	Model
 	ScopeID     string        `gorm:"size:50;name:范围" json:"scope_id"`
 	ScopeType   string        `gorm:"size:50;name:范围" json:"scope_type"`
 	Code        string        `gorm:"size:50;name:编码" json:"code"`
@@ -43,12 +41,12 @@ type Query struct {
 	Condition   string        `gorm:"size:200;name:条件" json:"condition"` //条件
 }
 
-func (s *Query) MD() *md.Mder {
-	return &md.Mder{ID: "query.query", Domain: md_domain, Name: "查询"}
+func (s *Query) MD() *Mder {
+	return &Mder{ID: "query.query", Domain: md_domain, Name: "查询"}
 }
 
 type QueryColumn struct {
-	md.Model
+	Model
 	QueryID   string      `gorm:"size:50;name:查询" json:"query_id"`
 	OwnerID   string      `gorm:"size:50;name:所属ID" json:"owner_id"`
 	OwnerType string      `gorm:"size:50;name:所属类型" json:"owner_type"`
@@ -69,12 +67,12 @@ type QueryColumn struct {
 	Enabled   utils.SBool `gorm:"name:启用;default:true" json:"enabled"`
 }
 
-func (s *QueryColumn) MD() *md.Mder {
-	return &md.Mder{ID: "query.column", Domain: md_domain, Name: "查询栏目"}
+func (s *QueryColumn) MD() *Mder {
+	return &Mder{ID: "query.column", Domain: md_domain, Name: "查询栏目"}
 }
 
 type QueryOrder struct {
-	md.Model
+	Model
 	QueryID   string      `gorm:"size:50;name:查询" json:"query_id"`
 	OwnerID   string      `gorm:"size:50;name:所属ID" json:"owner_id"`
 	OwnerType string      `gorm:"size:50;name:所属类型" json:"owner_type"`
@@ -89,12 +87,12 @@ type QueryOrder struct {
 	Sequence  int         `gorm:"default:0;name:顺序"  json:"sequence"`
 }
 
-func (s *QueryOrder) MD() *md.Mder {
-	return &md.Mder{ID: "query.order", Domain: md_domain, Name: "查询排序"}
+func (s *QueryOrder) MD() *Mder {
+	return &Mder{ID: "query.order", Domain: md_domain, Name: "查询排序"}
 }
 
 type QueryWhere struct {
-	md.Model
+	Model
 	QueryID    string        `gorm:"size:50;name:查询" json:"query_id"`
 	OwnerID    string        `gorm:"size:50;name:所属ID" json:"owner_id"`
 	OwnerType  string        `gorm:"size:50;name:所属类型" json:"owner_type"`
@@ -117,12 +115,12 @@ type QueryWhere struct {
 	Children   []QueryWhere  `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;foreignkey:ParentID;name:子条件" json:"children"`
 }
 
-func (s *QueryWhere) MD() *md.Mder {
-	return &md.Mder{ID: "query.where", Domain: md_domain, Name: "查询条件"}
+func (s *QueryWhere) MD() *Mder {
+	return &Mder{ID: "query.where", Domain: md_domain, Name: "查询条件"}
 }
 
 type QueryFilter struct {
-	md.Model
+	Model
 	QueryID    string      `gorm:"size:50;name:查询ID" json:"query_id"`    //查询
 	OwnerField string      `gorm:"size:50;name:所属字段" json:"owner_field"` //字段名称
 	Field      string      `gorm:"size:50;name:字段" json:"field"`         //如果#开始，则表示标记，需要使用表达式
@@ -136,6 +134,6 @@ type QueryFilter struct {
 	Enabled    utils.SBool `gorm:"default:true;name:启用" json:"enabled"`
 }
 
-func (s *QueryFilter) MD() *md.Mder {
-	return &md.Mder{ID: "query.filter", Domain: md_domain, Name: "查询过滤"}
+func (s *QueryFilter) MD() *Mder {
+	return &Mder{ID: "query.filter", Domain: md_domain, Name: "查询过滤"}
 }

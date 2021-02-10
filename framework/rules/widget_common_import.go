@@ -10,7 +10,6 @@ import (
 	"github.com/ggoop/mdf/framework/files"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
 	"github.com/ggoop/mdf/utils"
 )
 
@@ -21,7 +20,7 @@ type CommonImport struct {
 func NewCommonImport(repo *repositories.MysqlRepo) *CommonImport {
 	return &CommonImport{repo}
 }
-func (s *CommonImport) Exec(req *mof.ReqContext, res *mof.ResContext) error {
+func (s *CommonImport) Exec(req *md.ReqContext, res *md.ResContext) error {
 	log := service.NewLogSv(s.repo)
 	logData := model.Log{EntID: req.EntID, UserID: req.UserID, NodeType: req.Command, NodeID: req.Widget, DataID: req.Entity}
 	log.CreateLog(logData.Clone().SetMsg("导入开始======begin======"))
@@ -51,7 +50,7 @@ func (s *CommonImport) Exec(req *mof.ReqContext, res *mof.ResContext) error {
 	}
 	return nil
 }
-func (s *CommonImport) doMultiple(req *mof.ReqContext, res *mof.ResContext, entity *md.MDEntity, datas []files.ImportData) error {
+func (s *CommonImport) doMultiple(req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, datas []files.ImportData) error {
 	for _, data := range datas {
 		newEntity := entity
 		if data.Entity.Code != "" {
@@ -63,7 +62,7 @@ func (s *CommonImport) doMultiple(req *mof.ReqContext, res *mof.ResContext, enti
 	}
 	return nil
 }
-func (s *CommonImport) importMapData(req *mof.ReqContext, res *mof.ResContext, entity *md.MDEntity, datas []map[string]interface{}) error {
+func (s *CommonImport) importMapData(req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, datas []map[string]interface{}) error {
 	log := service.NewLogSv(s.repo)
 	logData := model.Log{EntID: req.EntID, UserID: req.UserID, NodeType: req.Command, NodeID: req.Widget, DataID: req.Entity}
 	log.CreateLog(logData.Clone().SetMsg(fmt.Sprintf("接收到需要导入的数据-%s：%v条", req.Entity, len(datas))))
@@ -90,7 +89,7 @@ func (s *CommonImport) importMapData(req *mof.ReqContext, res *mof.ResContext, e
 					dbItem[fieldName] = obj["id"]
 					quotedMap[fieldName] = fieldName
 				} else if obj, is := kv.(string); is && obj != "" {
-					qreq := mof.ReqContext{Entity: field.TypeID, Q: obj, EntID: req.EntID, UserID: req.UserID, Data: item}
+					qreq := md.ReqContext{Entity: field.TypeID, Q: obj, EntID: req.EntID, UserID: req.UserID, Data: item}
 					if obj, err := mdsv.TakeDataByQ(qreq); err != nil {
 						log.CreateLog(logData.Clone().SetMsg(fmt.Sprintf("数据[%s]=[%s],查询失败：%v", qreq.Entity, qreq.Q, err.Error())))
 					} else if len(obj) > 0 && obj["id"] != nil {
@@ -216,6 +215,6 @@ func (s *CommonImport) batchInsertSave(entity *md.MDEntity, quoted []string, pla
 	return nil
 }
 
-func (s *CommonImport) GetRule() mof.RuleRegister {
-	return mof.RuleRegister{Code: "import", Owner: "common"}
+func (s *CommonImport) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "import", Owner: "common"}
 }

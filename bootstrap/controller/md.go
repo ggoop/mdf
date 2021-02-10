@@ -16,7 +16,6 @@ import (
 	"github.com/ggoop/mdf/framework/files"
 	"github.com/ggoop/mdf/framework/http/results"
 	"github.com/ggoop/mdf/framework/md"
-	"github.com/ggoop/mdf/framework/mof"
 	"github.com/ggoop/mdf/utils"
 )
 
@@ -45,7 +44,7 @@ func (c *MdController) AnyInit() results.Result {
 // 获取页面
 func (c *MdController) PostPageFetch() results.Result {
 	ctx := c.Ctx.Values().Get(context.DefaultContextKey).(*context.Context)
-	var postInput mof.ReqContext
+	var postInput md.ReqContext
 	if err := c.Ctx.ReadJSON(&postInput); err != nil {
 		return results.ToError(err)
 	}
@@ -59,7 +58,7 @@ func (c *MdController) PostPageFetch() results.Result {
 }
 func (c *MdController) PostActionDo() results.Result {
 	ctx := c.Ctx.Values().Get(context.DefaultContextKey).(*context.Context)
-	var postInput mof.ReqContext
+	var postInput md.ReqContext
 	if err := c.Ctx.ReadJSON(&postInput); err != nil {
 		return results.ToError(err)
 	}
@@ -82,7 +81,7 @@ func (c *MdController) PostImport() results.Result {
 	if err := ctx.Valid(true, false); err != nil {
 		return results.ToError(err)
 	}
-	var postInput mof.ReqContext
+	var postInput md.ReqContext
 	if err := c.Ctx.ReadForm(&postInput); err != nil {
 		c.Ctx.ReadJSON(&postInput)
 	}

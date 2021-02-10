@@ -1,4 +1,4 @@
-package mof
+package md
 
 import (
 	"fmt"
@@ -6,40 +6,39 @@ import (
 
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
-	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 )
 
-type MOFSv struct {
+type MDSv struct {
 	repo *repositories.MysqlRepo
 }
 
-func NewMOFSv(repo *repositories.MysqlRepo) *MOFSv {
-	return &MOFSv{repo: repo}
+func NewMDSv(repo *repositories.MysqlRepo) *MDSv {
+	return &MDSv{repo: repo}
 }
 
-func (s *MOFSv) getEntity(entityID string) md.MDEntity {
-	item := md.MDEntity{}
+func (s *MDSv) getEntity(entityID string) MDEntity {
+	item := MDEntity{}
 	s.repo.Model(item).Order("id").Take(&item, "id=?", entityID)
 	return item
 }
-func (s *MOFSv) ImportUIMeta(entityID string) {
+func (s *MDSv) ImportUIMeta(entityID string) {
 	return
 }
-func (s *MOFSv) entityToTables(items []md.MDEntity, oldItems []md.MDEntity) error {
+func (s *MDSv) entityToTables(items []MDEntity, oldItems []MDEntity) error {
 	if items == nil || len(items) == 0 {
 		return nil
 	}
 	for i, _ := range items {
 		entity := items[i]
-		oldItem := md.MDEntity{}
+		oldItem := MDEntity{}
 		for oi, ov := range oldItems {
 			if entity.ID == ov.ID {
 				oldItem = oldItems[oi]
 				break
 			}
 		}
-		if entity.Type != md.TYPE_ENTITY {
+		if entity.Type != TYPE_ENTITY {
 			continue
 		}
 		if entity.TableName == "" {
@@ -53,7 +52,7 @@ func (s *MOFSv) entityToTables(items []md.MDEntity, oldItems []md.MDEntity) erro
 	}
 	return nil
 }
-func (s *MOFSv) createTable(item md.MDEntity) {
+func (s *MDSv) createTable(item MDEntity) {
 	if len(item.Fields) == 0 {
 		return
 	}
@@ -77,17 +76,17 @@ func (s *MOFSv) createTable(item md.MDEntity) {
 		glog.Error(err)
 	}
 }
-func (s *MOFSv) quote(str string) string {
+func (s *MDSv) quote(str string) string {
 	return s.repo.Dialect().Quote(str)
 }
-func (s *MOFSv) updateTable(item md.MDEntity, old md.MDEntity) {
+func (s *MDSv) updateTable(item MDEntity, old MDEntity) {
 	//更新栏目
 	for i := range item.Fields {
 		field := item.Fields[i]
 		if field.DbName == "-" || field.DbName == "" {
 			continue
 		}
-		oldField := md.MDField{}
+		oldField := MDField{}
 		for oi, ov := range old.Fields {
 			if strings.ToLower(field.Code) == strings.ToLower(ov.Code) {
 				oldField = old.Fields[oi]
@@ -113,7 +112,7 @@ func (s *MOFSv) updateTable(item md.MDEntity, old md.MDEntity) {
 		}
 	}
 }
-func (s *MOFSv) buildColumnNameString(item md.MDField) string {
+func (s *MDSv) buildColumnNameString(item MDField) string {
 	/*
 		column_definition:
 		data_type [NOT NULL | NULL] [DEFAULT {literal | (expr)} ]
@@ -128,15 +127,15 @@ func (s *MOFSv) buildColumnNameString(item md.MDField) string {
 		return s.buildColumnNameString4Mysql(item)
 	}
 }
-func (s *MOFSv) AddMDEntities(items []md.MDEntity) error {
+func (s *MDSv) AddMDEntities(items []MDEntity) error {
 	entityIds := make([]string, 0)
-	oldEntities := make([]md.MDEntity, 0)
+	oldEntities := make([]MDEntity, 0)
 	for i, _ := range items {
 		entity := items[i]
 		if entity.ID == "" {
 			continue
 		}
-		oldEntity := md.MDEntity{}
+		oldEntity := MDEntity{}
 		if s.repo.Model(oldEntity).Preload("Fields").Order("id").Where("id=?", entity.ID).Take(&oldEntity); oldEntity.ID != "" {
 			oldEntities = append(oldEntities, oldEntity)
 			datas := make(map[string]interface{})
@@ -165,10 +164,10 @@ func (s *MOFSv) AddMDEntities(items []md.MDEntity) error {
 				datas["Memo"] = entity.Memo
 			}
 			if len(datas) > 0 {
-				s.repo.Model(md.MDEntity{}).Where("id=?", oldEntity.ID).Updates(datas)
+				s.repo.Model(MDEntity{}).Where("id=?", oldEntity.ID).Updates(datas)
 			}
 		} else {
-			if entity.Type == md.TYPE_ENTITY && entity.TableName == "" {
+			if entity.Type == TYPE_ENTITY && entity.TableName == "" {
 				entity.TableName = strings.ReplaceAll(entity.ID, ".", "_")
 			}
 			s.repo.Create(&entity)
@@ -178,7 +177,7 @@ func (s *MOFSv) AddMDEntities(items []md.MDEntity) error {
 	//属性字段
 	for i, _ := range items {
 		entity := items[i]
-		if entity.ID != "" && entity.Type == md.TYPE_ENTITY && len(entity.Fields) > 0 {
+		if entity.ID != "" && entity.Type == TYPE_ENTITY && len(entity.Fields) > 0 {
 			itemCodes := make([]string, 0)
 			for f, _ := range entity.Fields {
 				field := entity.Fields[f]
@@ -190,12 +189,12 @@ func (s *MOFSv) AddMDEntities(items []md.MDEntity) error {
 				if field.DbName == "" && field.IsNormal.IsTrue() {
 					field.DbName = utils.SnakeString(field.Code)
 				}
-				oldField := md.MDField{}
+				oldField := MDField{}
 				if fieldType := s.getEntity(field.TypeID); fieldType.ID != "" {
 					field.TypeType = fieldType.Type
 					field.TypeID = fieldType.ID
 				}
-				if field.TypeType == md.TYPE_ENTITY { //实体
+				if field.TypeType == TYPE_ENTITY { //实体
 					if field.Kind == "" {
 						field.Kind = "belongs_to"
 					}
@@ -206,7 +205,7 @@ func (s *MOFSv) AddMDEntities(items []md.MDEntity) error {
 						field.AssociationKey = "ID"
 					}
 					field.IsNormal = utils.SBool_False
-				} else if field.TypeType == md.TYPE_ENUM { //枚举
+				} else if field.TypeType == TYPE_ENUM { //枚举
 					if field.Kind == "" {
 						field.Kind = "belongs_to"
 					}
@@ -218,7 +217,7 @@ func (s *MOFSv) AddMDEntities(items []md.MDEntity) error {
 					}
 					field.IsNormal = utils.SBool_False
 				}
-				if s.repo.Model(md.MDField{}).Order("id").Where("entity_id=? and code=?", entity.ID, field.Code).Take(&oldField); oldField.ID != "" {
+				if s.repo.Model(MDField{}).Order("id").Where("entity_id=? and code=?", entity.ID, field.Code).Take(&oldField); oldField.ID != "" {
 					datas := make(map[string]interface{})
 					if oldField.Name != field.Name {
 						datas["Name"] = field.Name
@@ -278,22 +277,22 @@ func (s *MOFSv) AddMDEntities(items []md.MDEntity) error {
 						datas["SrcID"] = field.SrcID
 					}
 					if len(datas) > 0 {
-						s.repo.Model(md.MDField{}).Where("entity_id=? and code=?", entity.ID, field.Code).Updates(datas)
+						s.repo.Model(MDField{}).Where("entity_id=? and code=?", entity.ID, field.Code).Updates(datas)
 					}
 				} else {
 					s.repo.Create(&field)
 				}
 			}
-			s.repo.Delete(md.MDField{}, "entity_id=? and code not in (?)", entity.ID, itemCodes)
+			s.repo.Delete(MDField{}, "entity_id=? and code not in (?)", entity.ID, itemCodes)
 		}
 	}
 	//枚举
 	for _, entity := range items {
-		if entity.ID != "" && entity.Type == md.TYPE_ENUM && len(entity.Fields) > 0 {
+		if entity.ID != "" && entity.Type == TYPE_ENUM && len(entity.Fields) > 0 {
 			itemCodes := make([]string, 0)
 			for f, field := range entity.Fields {
-				newEnum := md.MDEnum{ID: field.Code, EntityID: entity.ID, Sequence: f, Name: field.Name}
-				oldEnum := md.MDEnum{}
+				newEnum := MDEnum{ID: field.Code, EntityID: entity.ID, Sequence: f, Name: field.Name}
+				oldEnum := MDEnum{}
 				itemCodes = append(itemCodes, newEnum.ID)
 				if s.repo.Model(oldEnum).Order("id").Where("entity_id=? and id=?", newEnum.EntityID, newEnum.ID).Take(&oldEnum); oldEnum.ID != "" {
 					datas := make(map[string]interface{})
@@ -304,21 +303,21 @@ func (s *MOFSv) AddMDEntities(items []md.MDEntity) error {
 						datas["Sequence"] = newEnum.Sequence
 					}
 					if len(datas) > 0 {
-						s.repo.Model(md.MDEnum{}).Where("entity_id=? and id=?", oldEnum.EntityID, oldEnum.ID).Updates(datas)
+						s.repo.Model(MDEnum{}).Where("entity_id=? and id=?", oldEnum.EntityID, oldEnum.ID).Updates(datas)
 					}
 				} else {
 					s.repo.Create(&newEnum)
 				}
 			}
-			s.repo.Delete(md.MDEnum{}, "entity_id=? and id not in (?)", entity.ID, itemCodes)
+			s.repo.Delete(MDEnum{}, "entity_id=? and id not in (?)", entity.ID, itemCodes)
 		}
 	}
 	if len(entityIds) > 0 {
-		toTables := make([]md.MDEntity, 0)
-		s.repo.Model(md.MDEntity{}).Preload("Fields").Where("id in (?) and type=?", entityIds, md.TYPE_ENTITY).Find(&toTables)
+		toTables := make([]MDEntity, 0)
+		s.repo.Model(MDEntity{}).Preload("Fields").Where("id in (?) and type=?", entityIds, TYPE_ENTITY).Find(&toTables)
 		return s.entityToTables(toTables, oldEntities)
 	}
 	//缓存
-	md.CacheMD(s.repo)
+	CacheMD(s.repo)
 	return nil
 }

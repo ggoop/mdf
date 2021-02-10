@@ -1,4 +1,4 @@
-package query
+package md
 
 import (
 	"database/sql"
@@ -11,7 +11,6 @@ import (
 	"github.com/ggoop/mdf/framework/db/gorm"
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
-	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 
 	"github.com/shopspring/decimal"
@@ -39,61 +38,6 @@ type IExector interface {
 const REGEXP_FIELD_EXP_STRICT string = `\$\$([A-Za-z._]+[0-9A-Za-z]*)`
 const REGEXP_FIELD_EXP string = `([A-Za-z._]+[0-9A-Za-z]*)`
 const REGEXP_VAR_EXP string = `{([A-Za-z._]+[0-9A-Za-z]*)}`
-
-type oqlEntity struct {
-	Alia     string
-	IsMain   bool
-	Entity   *md.MDEntity
-	Path     string
-	Sequence int
-}
-type oqlField struct {
-	Entity *oqlEntity
-	Field  *md.MDField
-	Path   string
-}
-type IQFrom interface {
-	GetQuery() string
-	GetAlia() string
-	GetExpr() string
-}
-type oqlFrom struct {
-	Query string
-	Alia  string
-	Expr  string
-}
-
-func (m *oqlFrom) GetQuery() string {
-	return m.Query
-}
-func (m *oqlFrom) GetAlia() string {
-	return m.Alia
-}
-func (m *oqlFrom) GetExpr() string {
-	return m.Expr
-}
-
-type oqlJoin struct {
-	Query string
-	Expr  string
-	Args  []interface{}
-}
-type oqlSelect struct {
-	Query string
-	Expr  string
-	Args  []interface{}
-}
-type oqlOrder struct {
-	Query    string
-	Sequence int
-	Expr     string
-	Args     []interface{}
-}
-type oqlGroup struct {
-	Query string
-	Expr  string
-	Args  []interface{}
-}
 
 type exector struct {
 	entities  map[string]*oqlEntity
@@ -146,11 +90,11 @@ func (m *exector) SetFieldDataType(field, dataType string) IExector {
 	m.dataTypes[field] = dataType
 	return m
 }
-func (m *exector) formatEntity(entity *md.MDEntity) *oqlEntity {
+func (m *exector) formatEntity(entity *MDEntity) *oqlEntity {
 	e := oqlEntity{Entity: entity}
 	return &e
 }
-func (m *exector) formatField(entity *oqlEntity, field *md.MDField) *oqlField {
+func (m *exector) formatField(entity *oqlEntity, field *MDField) *oqlField {
 	e := oqlField{Entity: entity, Field: field}
 	return &e
 }
@@ -271,10 +215,10 @@ func (m *exector) PrepareQuery(mysql *repositories.MysqlRepo) (*gorm.DB, error) 
 		m.parseWhereField(v)
 	}
 	for _, v := range m.orders {
-		v.Expr = m.replaceFieldString(v.Query)
+		v.expr = m.replaceFieldString(v.Query)
 	}
 	for _, v := range m.groups {
-		v.Expr = m.replaceFieldString(v.Query)
+		v.expr = m.replaceFieldString(v.Query)
 	}
 	//build
 
@@ -303,15 +247,15 @@ func (m *exector) PrepareQuery(mysql *repositories.MysqlRepo) (*gorm.DB, error) 
 func (m *exector) buildFroms(mysql *repositories.MysqlRepo) *gorm.DB {
 	parts := make([]string, 0)
 	for _, v := range m.froms {
-		parts = append(parts, v.Expr)
+		parts = append(parts, v.expr)
 	}
 	return mysql.Table(strings.Join(parts, ","))
 }
 func (m *exector) buildSelects(queryDB *gorm.DB) *gorm.DB {
 	selects := make([]string, 0)
 	for _, v := range m.selects {
-		if v.Expr != "" {
-			selects = append(selects, v.Expr)
+		if v.expr != "" {
+			selects = append(selects, v.expr)
 		}
 	}
 	queryDB = queryDB.Select(selects)
@@ -392,8 +336,8 @@ func (m *exector) buildWheres(wheres []*qWhere) (string, []interface{}, int) {
 func (m *exector) buildGroups(queryDB *gorm.DB) *gorm.DB {
 	selects := make([]string, 0)
 	for _, v := range m.groups {
-		if v.Expr != "" {
-			selects = append(selects, v.Expr)
+		if v.expr != "" {
+			selects = append(selects, v.expr)
 		}
 	}
 	queryDB = queryDB.Group(strings.Join(selects, ","))
@@ -402,8 +346,8 @@ func (m *exector) buildGroups(queryDB *gorm.DB) *gorm.DB {
 func (m *exector) buildOrders(queryDB *gorm.DB) *gorm.DB {
 	selects := make([]string, 0)
 	for _, v := range m.orders {
-		if v.Expr != "" {
-			selects = append(selects, v.Expr)
+		if v.expr != "" {
+			selects = append(selects, v.expr)
 		}
 	}
 	queryDB = queryDB.Order(strings.Join(selects, ","))
@@ -432,12 +376,12 @@ func (m *exector) buildJoins(queryDB *gorm.DB) *gorm.DB {
 			args := make([]interface{}, 0)
 			condition := ""
 			tag := false
-			if relationship.Field.TypeType == md.TYPE_ENUM {
+			if relationship.Field.TypeType == TYPE_ENUM {
 				if relationship.Field.Limit != "" {
-					condition = fmt.Sprintf(" and %v.entity_id=?", t.Alia)
+					condition = fmt.Sprintf(" and %v.entity_id=?", t.Alias)
 					args = append(args, relationship.Field.Limit)
 					queryDB = queryDB.Joins(fmt.Sprintf("left join %v  %v on %v.%v=%v.%v%v",
-						t.Entity.TableName, t.Alia, t.Alia, "id", relationship.Entity.Alia, fkey.DbName, condition),
+						t.Entity.TableName, t.Alias, t.Alias, "id", relationship.Entity.Alias, fkey.DbName, condition),
 						args...)
 					tag = true
 				}
@@ -445,14 +389,14 @@ func (m *exector) buildJoins(queryDB *gorm.DB) *gorm.DB {
 			}
 			if !tag {
 				queryDB = queryDB.Joins(fmt.Sprintf("left join %v  %v on %v.%v=%v.%v%v",
-					t.Entity.TableName, t.Alia, t.Alia, lkey.DbName, relationship.Entity.Alia, fkey.DbName, condition),
+					t.Entity.TableName, t.Alias, t.Alias, lkey.DbName, relationship.Entity.Alias, fkey.DbName, condition),
 					args...)
 			}
 		} else if relationship.Field.Kind == "has_many" {
 			fkey := t.Entity.GetField(relationship.Field.ForeignKey)
 			lkey := relationship.Entity.Entity.GetField(relationship.Field.AssociationKey)
 			if fkey != nil && lkey != nil {
-				queryDB = queryDB.Joins(fmt.Sprintf("left join %v  %v on %v.%v=%v.%v", t.Entity.TableName, t.Alia, t.Alia, fkey.DbName, relationship.Entity.Alia, lkey.DbName))
+				queryDB = queryDB.Joins(fmt.Sprintf("left join %v  %v on %v.%v=%v.%v", t.Entity.TableName, t.Alias, t.Alias, fkey.DbName, relationship.Entity.Alias, lkey.DbName))
 			} else {
 				glog.Error("构建join 联系出错，", glog.String("ForeignKey", relationship.Field.ForeignKey), glog.String("AssociationKey", relationship.Field.AssociationKey))
 			}
@@ -472,7 +416,7 @@ func (m *exector) replaceFieldString(expr string) string {
 		tag = true
 		field, _ := m.parseField(match[1])
 		if field != nil {
-			expr = strings.ReplaceAll(expr, match[0], fmt.Sprintf("%s.%s", field.Entity.Alia, field.Field.DbName))
+			expr = strings.ReplaceAll(expr, match[0], fmt.Sprintf("%s.%s", field.Entity.Alias, field.Field.DbName))
 		}
 	}
 	if !tag {
@@ -483,7 +427,7 @@ func (m *exector) replaceFieldString(expr string) string {
 			tag = true
 			field, _ := m.parseField(match[1])
 			if field != nil {
-				expr = strings.ReplaceAll(expr, match[0], fmt.Sprintf("%s.%s", field.Entity.Alia, field.Field.DbName))
+				expr = strings.ReplaceAll(expr, match[0], fmt.Sprintf("%s.%s", field.Entity.Alias, field.Field.DbName))
 			}
 		}
 	}
@@ -512,13 +456,13 @@ func (m *exector) parseFromField(value *oqlFrom) error {
 			return err
 		}
 		form.IsMain = true
-		strs = append(strs, fmt.Sprintf("%s  %s", form.Entity.TableName, form.Alia))
+		strs = append(strs, fmt.Sprintf("%s  %s", form.Entity.TableName, form.Alias))
 	}
-	value.Expr = strings.Join(strs, ",")
+	value.expr = strings.Join(strs, ",")
 	return nil
 }
 func (m *exector) parseSelectField(value *oqlSelect) {
-	value.Expr = m.replaceFieldString(value.Query)
+	value.expr = m.replaceFieldString(value.Query)
 }
 
 // 解析实体
@@ -527,13 +471,13 @@ func (m *exector) parseEntity(id, path string) (*oqlEntity, error) {
 	if v, ok := m.entities[path]; ok {
 		return v, nil
 	}
-	entity := md.GetEntity(id)
+	entity := GetEntity(id)
 	if entity == nil {
 		return nil, glog.Errorf("找不到实体 %v", id)
 	}
 	v := m.formatEntity(entity)
 	v.Sequence = len(m.entities) + 1
-	v.Alia = fmt.Sprintf("a%v", v.Sequence)
+	v.Alias = fmt.Sprintf("a%v", v.Sequence)
 	v.Path = path
 	m.entities[path] = v
 	return v, nil
@@ -551,7 +495,7 @@ func (m *exector) parseField(fieldPath string) (*oqlField, error) {
 	var mainFrom *oqlFrom
 	if len(parts) > 1 {
 		for i, v := range m.froms {
-			if v.Alia != "" && strings.ToLower(v.Alia) == parts[0] {
+			if v.Alias != "" && strings.ToLower(v.Alias) == parts[0] {
 				mainFrom = m.froms[i]
 				start = 1
 				break
@@ -560,7 +504,7 @@ func (m *exector) parseField(fieldPath string) (*oqlField, error) {
 	}
 	if mainFrom == nil {
 		for i, v := range m.froms {
-			if v.Alia == "" {
+			if v.Alias == "" {
 				mainFrom = m.froms[i]
 				break
 			}
@@ -569,7 +513,7 @@ func (m *exector) parseField(fieldPath string) (*oqlField, error) {
 	if mainFrom == nil {
 		mainFrom = m.froms[0]
 	}
-	entity := m.entities[strings.ToLower(mainFrom.Alia)]
+	entity := m.entities[strings.ToLower(mainFrom.Alias)]
 
 	path := ""
 	for i, part := range parts {
@@ -659,7 +603,7 @@ func (m *exector) From(query string) IExector {
 		parts := strings.Split(strings.TrimSpace(item), " ")
 		item := &oqlFrom{Query: item}
 		if len(parts) > 1 {
-			item.Alia = parts[len(parts)-1]
+			item.Alias = parts[len(parts)-1]
 		}
 		m.froms = append(m.froms, item)
 	}

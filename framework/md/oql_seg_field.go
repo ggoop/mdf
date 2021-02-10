@@ -13,6 +13,22 @@ type oqlField struct {
 	Path   string
 }
 
+type IQFrom interface {
+	GetQuery() string
+	GetAlias() string
+	GetExpr() string
+}
+
+func (m *oqlFrom) GetQuery() string {
+	return m.Query
+}
+func (m *oqlFrom) GetAlias() string {
+	return m.Alias
+}
+func (m *oqlFrom) GetExpr() string {
+	return m.expr
+}
+
 type oqlFrom struct {
 	Query string
 	Alias string
