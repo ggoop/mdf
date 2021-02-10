@@ -16,10 +16,6 @@ func NewCommonLoad(repo *repositories.MysqlRepo) *CommonLoad {
 	return &CommonLoad{repo}
 }
 
-func (s CommonLoad) GetRule() md.RuleRegister {
-	return md.RuleRegister{Code: "load", Owner: "common"}
-}
-
 func (s CommonLoad) Exec(req *md.ReqContext, res *md.ResContext) error {
 	if req.ID == "" {
 		return glog.Error("缺少 ID 参数！")
@@ -82,4 +78,8 @@ func (s CommonLoad) loadEntities(data map[string]interface{}, entity *md.MDEntit
 		}
 	}
 	return nil
+}
+
+func (s CommonLoad) GetRule() md.RuleRegister {
+	return md.RuleRegister{Code: "load", OwnerType: md.RuleType_Widget, OwnerID: "common"}
 }

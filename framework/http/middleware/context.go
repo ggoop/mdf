@@ -6,9 +6,6 @@ import (
 
 	"github.com/ggoop/mdf/framework/context"
 	"github.com/ggoop/mdf/utils"
-
-	"github.com/kataras/iris"
-	"github.com/kataras/iris/sessions"
 )
 
 type Context struct {

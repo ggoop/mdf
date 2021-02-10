@@ -6,10 +6,10 @@ type MDWidget struct {
 	ID        string      `gorm:"primary_key;size:36" json:"id"`
 	CreatedAt utils.Time  `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt utils.Time  `gorm:"name:更新时间" json:"updated_at"`
-	EntID     string      `gorm:"size:36;name:企业" json:"ent_id"`
-	Code      string      `gorm:"size:36;name:编码" json:"code"`
+	EntID     string      `gorm:"size:36;unique_index:uix_code;name:企业;not null" json:"ent_id"`
+	Code      string      `gorm:"size:36;unique_index:uix_code;name:编码;not null" json:"code"`
 	Name      string      `gorm:"size:50;name:名称" json:"name"`
-	Type      string      `gorm:"size:20;name:类型" json:"type"`
+	Type      string      `gorm:"size:20;name:类型;not null" json:"type"`
 	DsType    string      `gorm:"size:36;name:数据源类型" json:"ds_type"`
 	DsEntry   string      `gorm:"size:36;name:数据源实体" json:"ds_entry"`
 	FilterID  string      `gorm:"size:36;name:过滤器" json:"filter_id"`
@@ -27,11 +27,11 @@ type MDWidgetDatasource struct {
 	ID         string      `gorm:"primary_key;size:36" json:"id"`
 	CreatedAt  utils.Time  `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt  utils.Time  `gorm:"name:更新时间" json:"updated_at"`
-	EntID      string      `gorm:"size:36;name:企业" json:"ent_id"`
-	WidgetID   string      `gorm:"size:36;name:组件ID" json:"widget_id"`
-	Code       string      `gorm:"size:36;name:编码" json:"code"`
+	EntID      string      `gorm:"size:36;name:企业;not null" json:"ent_id"`
+	WidgetID   string      `gorm:"size:36;unique_index:uix_code;name:组件ID;not null" json:"widget_id"`
+	Code       string      `gorm:"size:36;unique_index:uix_code;name:编码;not null" json:"code"`
 	Name       string      `gorm:"size:50;name:名称" json:"name"`
-	DsType     string      `gorm:"size:36;name:数据源类型" json:"ds_type"`
+	DsType     string      `gorm:"size:36;name:数据源类型;not null" json:"ds_type"`
 	DsEntry    string      `gorm:"size:36;name:数据源实体" json:"ds_entry"`
 	IsMain     utils.SBool `gorm:"name:是否主实体" json:"is_main"`
 	PrimaryKey string      `gorm:"size:36;name:主键" json:"primary_key"`
@@ -50,14 +50,14 @@ type MDWidgetLayout struct {
 	ID        string           `gorm:"primary_key;size:36" json:"id"`
 	CreatedAt utils.Time       `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt utils.Time       `gorm:"name:更新时间" json:"updated_at"`
-	EntID     string           `gorm:"size:36;name:企业" json:"ent_id"`
-	WidgetID  string           `gorm:"size:36;name:组件ID" json:"widget_id"`
+	EntID     string           `gorm:"size:36;name:企业;not null" json:"ent_id"`
+	WidgetID  string           `gorm:"size:36;unique_index:uix_code;name:组件ID;not null" json:"widget_id"`
 	ParentID  string           `gorm:"size:36;name:上级" json:"parent_id"`
 	Children  []MDWidgetLayout `gorm:"-" json:"children"`
-	Code      string           `gorm:"size:36;name:编码" json:"code"`
+	Code      string           `gorm:"size:36;unique_index:uix_code;name:编码;not null" json:"code"`
 	Name      string           `gorm:"size:50;name:名称" json:"name"`
-	Type      string           `gorm:"size:20;name:布局类型" json:"type"`
-	Sequence  int              `gorm:"size:3;name:顺序" json:"sequence"`
+	Type      string           `gorm:"size:20;name:布局类型;not null" json:"type"`
+	Sequence  int              `gorm:"size:3;name:顺序;not null" json:"sequence"`
 	Align     string           `gorm:"size:20;name:对齐方式" json:"align"`
 	Cols      int              `gorm:"size:3;name:列数" json:"cols"`
 	Style     utils.SJson      `gorm:"type:text;name:样式" json:"style"`
@@ -73,14 +73,14 @@ type MDWidgetItem struct {
 	ID          string         `gorm:"primary_key;size:36" json:"id"`
 	CreatedAt   utils.Time     `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt   utils.Time     `gorm:"name:更新时间" json:"updated_at"`
-	EntID       string         `gorm:"size:36;name:企业" json:"ent_id"`
-	WidgetID    string         `gorm:"size:36;name:组件ID" json:"widget_id"`
-	LayoutID    string         `gorm:"size:36;name:布局ID" json:"layout_id"`
+	EntID       string         `gorm:"size:36;name:企业;not null" json:"ent_id"`
+	WidgetID    string         `gorm:"size:36;unique_index:uix_code;name:组件ID;not null" json:"widget_id"`
+	LayoutID    string         `gorm:"size:36;unique_index:uix_code;name:布局ID;not null" json:"layout_id"`
 	ParentID    string         `gorm:"size:36;name:上级" json:"parent_id"`
 	Children    []MDWidgetItem `gorm:"-" json:"children"`
-	Code        string         `gorm:"size:36;name:编码" json:"code"`
+	Code        string         `gorm:"size:36;unique_index:uix_code;name:编码;not null" json:"code"`
 	Name        string         `gorm:"size:50;name:名称" json:"name"`
-	Type        string         `gorm:"size:20;name:类型" json:"type"`
+	Type        string         `gorm:"size:20;name:类型;not null" json:"type"`
 	Caption     string         `gorm:"size:50;name:标题" json:"caption"`
 	DsType      string         `gorm:"size:36;name:数据源类型" json:"ds_type"`
 	DsEntry     string         `gorm:"size:36;name:数据源实体" json:"ds_entry"`

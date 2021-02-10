@@ -29,6 +29,7 @@ func (c *DevController) PostWidgetImport() results.Result {
 		c.Ctx.ReadJSON(&postInput)
 	}
 	file, info, err := c.Ctx.FormFile("file")
+	glog.Error(c.Ctx.GetContentType())
 	if err != nil {
 		return results.ToError(err)
 	}

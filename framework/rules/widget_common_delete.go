@@ -44,5 +44,5 @@ func (s CommonDelete) Exec(req *md.ReqContext, res *md.ResContext) error {
 	return nil
 }
 func (s CommonDelete) GetRule() md.RuleRegister {
-	return md.RuleRegister{Code: "delete", Owner: "common"}
+	return md.RuleRegister{Code: "delete", OwnerType: md.RuleType_Widget, OwnerID: "common"}
 }

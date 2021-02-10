@@ -19,9 +19,9 @@ type MDEntity struct {
 	ID        string     `gorm:"primary_key;size:50" json:"id"`
 	CreatedAt utils.Time `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt utils.Time `gorm:"name:更新时间" json:"updated_at"`
-	Type      string     `gorm:"size:50"` // simple，entity，enum，interface，dto,view
+	Type      string     `gorm:"size:50;not null"` // simple，entity，enum，interface，dto,view
 	Domain    string     `gorm:"size:50;name:领域" json:"domain"`
-	Code      string     `gorm:"size:100;index:code_idx"`
+	Code      string     `gorm:"size:100;index:code_idx;not null"`
 	Name      string     `gorm:"size:100"`
 	TableName string     `gorm:"size:50"`
 	Memo      string     `gorm:"size:500"`
@@ -60,11 +60,11 @@ type MDEntityRelation struct {
 	ID        string     `gorm:"primary_key;size:50" json:"id"`
 	CreatedAt utils.Time `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt utils.Time `gorm:"name:更新时间" json:"updated_at"`
-	Code      string     `gorm:"size:100;index:code_idx"`
+	Code      string     `gorm:"size:100;index:code_idx;not null"`
 	Name      string     `gorm:"size:100"`
-	ParentID  string     `gorm:"size:50;name:父实体"`
-	ChildID   string     `gorm:"size:50;name:子实体"`
-	Kind      string     `gorm:"name:参数"` //inherit，interface，
+	ParentID  string     `gorm:"size:50;name:父实体;not null"`
+	ChildID   string     `gorm:"size:50;name:子实体;not null"`
+	Kind      string     `gorm:"name:类型;not null"` //inherit，interface，
 	ParentKey string     `gorm:"size:36;name:主键" json:"parent_key"`
 	ChildKey  string     `gorm:"size:36;name:外键" json:"child_key"`
 	Limit     string     `gorm:"size:500;name:限制"`
@@ -78,9 +78,9 @@ type MDField struct {
 	ID             string     `gorm:"primary_key;size:50" json:"id"`
 	CreatedAt      utils.Time `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt      utils.Time `gorm:"name:更新时间" json:"updated_at"`
-	EntityID       string     `gorm:"size:50;unique_index:uix"`
+	EntityID       string     `gorm:"size:50;unique_index:uix_code;not null"`
 	Entity         *MDEntity  `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false"`
-	Code           string     `gorm:"size:50;unique_index:uix"`
+	Code           string     `gorm:"size:50;unique_index:uix_code;not null"`
 	Name           string     `gorm:"size:50"`
 	DbName         string     `gorm:"size:50"`
 	IsNormal       utils.SBool

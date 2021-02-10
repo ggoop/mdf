@@ -66,10 +66,10 @@ func (c *MdController) PostActionDo() results.Result {
 		postInput.EntID = ctx.EntID()
 	}
 	postInput.UserID = ctx.UserID()
-	if rtn, err := c.MdSv.DoAction(postInput); err != nil {
-		return results.ToError(err)
+	if rtn := c.MdSv.DoAction(postInput); rtn.Error != nil {
+		return results.ToError(rtn.Error)
 	} else {
-		return results.ToJson(rtn)
+		return results.ToJson(rtn.Data)
 	}
 }
 
@@ -101,12 +101,12 @@ func (c *MdController) PostImport() results.Result {
 	if postInput.EntID == "" {
 		postInput.EntID = ctx.EntID()
 	}
-	postInput.Command = "import"
+	postInput.Action = "import"
 	postInput.UserID = ctx.UserID()
-	if rtn, err := c.MdSv.DoAction(postInput); err != nil {
-		return results.ToError(err)
+	if rtn := c.MdSv.DoAction(postInput); rtn.Error != nil {
+		return results.ToError(rtn.Error)
 	} else {
-		return results.ToJson(rtn)
+		return results.ToJson(rtn.Data)
 	}
 }
 

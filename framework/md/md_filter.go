@@ -6,10 +6,10 @@ type MDFilters struct {
 	ID        string      `gorm:"primary_key;size:36" json:"id"`
 	CreatedAt utils.Time  `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt utils.Time  `gorm:"name:更新时间" json:"updated_at"`
-	EntID     string      `gorm:"size:36;name:企业" json:"ent_id"`
-	Code      string      `gorm:"size:36;name:编码" json:"code"`
+	EntID     string      `gorm:"size:36;unique_index:uix_code;name:企业;not null" json:"ent_id"`
+	Code      string      `gorm:"size:36;unique_index:uix_code;name:编码;not null" json:"code"`
 	Name      string      `gorm:"size:50;name:名称" json:"name"`
-	DsType    string      `gorm:"size:36;name:数据源类型" json:"ds_type"`
+	DsType    string      `gorm:"size:36;name:数据源类型;not null" json:"ds_type"`
 	DsEntry   string      `gorm:"size:36;name:数据源实体" json:"ds_entry"`
 	AutoLoad  utils.SBool `gorm:"name:自动加载" json:"auto_load"`
 	PageSize  int         `gorm:"size:3;name:每页大小" json:"page_size"`
@@ -26,9 +26,9 @@ type MDFilterSolution struct {
 	ID        string      `gorm:"primary_key;size:36" json:"id"`
 	CreatedAt utils.Time  `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt utils.Time  `gorm:"name:更新时间" json:"updated_at"`
-	EntID     string      `gorm:"size:36;name:企业" json:"ent_id"`
-	FilterID  string      `gorm:"size:36;name:过滤器ID" json:"filter_id"`
-	Code      string      `gorm:"size:36;name:编码" json:"code"`
+	EntID     string      `gorm:"size:36;name:企业;not null" json:"ent_id"`
+	FilterID  string      `gorm:"size:36;name:过滤器ID;not null" json:"filter_id"`
+	Code      string      `gorm:"size:36;name:编码;not null" json:"code"`
 	Name      string      `gorm:"size:50;name:名称" json:"name"`
 	AutoLoad  utils.SBool `gorm:"name:自动加载" json:"auto_load"`
 	PageSize  int         `gorm:"size:3;name:每页大小" json:"page_size"`
@@ -44,13 +44,13 @@ type MDFilterItem struct {
 	ID          string      `gorm:"primary_key;size:36" json:"id"`
 	CreatedAt   utils.Time  `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt   utils.Time  `gorm:"name:更新时间" json:"updated_at"`
-	EntID       string      `gorm:"size:36;name:企业" json:"ent_id"`
-	FilterID    string      `gorm:"size:36;name:过滤器ID" json:"filter_id"`
+	EntID       string      `gorm:"size:36;name:企业;not null" json:"ent_id"`
+	FilterID    string      `gorm:"size:36;unique_index:uix_code;name:过滤器ID;not null" json:"filter_id"`
 	SolutionID  string      `gorm:"size:36;name:过滤方案ID" json:"solution_id"`
 	ParentID    string      `gorm:"size:36;name:上级" json:"parent_id"`
-	Code        string      `gorm:"size:36;name:编码" json:"code"`
+	Code        string      `gorm:"size:36;unique_index:uix_code;name:编码;not null" json:"code"`
 	Name        string      `gorm:"size:50;name:名称" json:"name"`
-	Type        string      `gorm:"size:20;name:类型" json:"type"`
+	Type        string      `gorm:"size:20;name:类型;not null" json:"type"`
 	Caption     string      `gorm:"size:50;name:标题" json:"caption"`
 	DsType      string      `gorm:"size:36;name:数据源类型" json:"ds_type"`
 	DsEntry     string      `gorm:"size:36;name:数据源实体" json:"ds_entry"`

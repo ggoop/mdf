@@ -140,13 +140,6 @@ func (s *CommonSave) doActionCreate(req *md.ReqContext, res *md.ResContext, enti
 	if err := s.dataCheck(req, res, entity, changeData); err != nil {
 		return err
 	}
-	//执行前实体规则
-	if wr, ok := md.GetActionRule(entity.ID, "before_save"); ok {
-		req.Data = changeData
-		if err := wr.Exec(req, res); err != nil {
-			return err
-		}
-	}
 	//树规则
 	isTree := false
 	fieldParent := entity.GetField("ParentID")
@@ -199,14 +192,6 @@ func (s *CommonSave) doActionCreate(req *md.ReqContext, res *md.ResContext, enti
 	//保存关联实体
 	if err := s.saveRelationData(req, res, entity, reqData); err != nil {
 		return err
-	}
-
-	//执行保存后规则
-	if wr, ok := md.GetActionRule(entity.ID, "after_save"); ok {
-		req.Data = changeData
-		if err := wr.Exec(req, res); err != nil {
-			return err
-		}
 	}
 	res.SetData("data", changeData)
 	return nil
@@ -266,13 +251,6 @@ func (s *CommonSave) doActionUpdate(req *md.ReqContext, res *md.ResContext, enti
 		return err
 	}
 	if len(changeData) > 0 {
-		//执行前实体规则
-		if wr, ok := md.GetActionRule(entity.ID, "before_save"); ok {
-			req.Data = changeData
-			if err := wr.Exec(req, res); err != nil {
-				return err
-			}
-		}
 		//开始保存数据
 		if err := s.repo.Table(entity.TableName).Where("id=?", req.ID).Updates(changeData).Error; err != nil {
 			return err
@@ -318,14 +296,6 @@ func (s *CommonSave) doActionUpdate(req *md.ReqContext, res *md.ResContext, enti
 				}
 			}
 		}
-
-		//执行保存后规则
-		if wr, ok := md.GetActionRule(entity.ID, "after_save"); ok {
-			req.Data = changeData
-			if err := wr.Exec(req, res); err != nil {
-				return err
-			}
-		}
 		res.SetData("data", changeData)
 	}
 	return nil
@@ -351,7 +321,8 @@ func (s *CommonSave) saveRelationData(req *md.ReqContext, res *md.ResContext, en
 						newReq.UserID = req.UserID
 						newReq.EntID = req.EntID
 						newReq.OrgID = req.OrgID
-						newReq.Widget = req.Widget
+						newReq.OwnerType = req.OwnerType
+						newReq.OwnerID = req.OwnerID
 						refEntity := md.GetEntity(nv.TypeID)
 						if f := refEntity.GetField(nv.ForeignKey); f != nil {
 							ds[f.DbName] = reqData["id"]
@@ -376,8 +347,8 @@ func (s *CommonSave) saveRelationData(req *md.ReqContext, res *md.ResContext, en
 						newReq.Entity = refEntity.ID
 						newReq.Rule = ruleID
 
-						if _, err := md.DoAction(newReq); err != nil {
-							return err
+						if rtn := md.DoAction(newReq); rtn.Error != nil {
+							return rtn.Error
 						}
 					}
 				}
@@ -391,5 +362,5 @@ func (s *CommonSave) dataCheck(req *md.ReqContext, res *md.ResContext, entity *m
 	return nil
 }
 func (s *CommonSave) GetRule() md.RuleRegister {
-	return md.RuleRegister{Code: "save", Owner: "common"}
+	return md.RuleRegister{Code: "save", OwnerType: md.RuleType_Widget, OwnerID: "common"}
 }

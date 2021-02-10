@@ -37,5 +37,5 @@ func (s CommonDeleteBatch) Exec(req *md.ReqContext, res *md.ResContext) error {
 	return nil
 }
 func (s CommonDeleteBatch) GetRule() md.RuleRegister {
-	return md.RuleRegister{Code: "delete_batch", Owner: "common"}
+	return md.RuleRegister{Code: "delete_batch", OwnerType: md.RuleType_Widget, OwnerID: "common"}
 }

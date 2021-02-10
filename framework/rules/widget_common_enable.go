@@ -30,5 +30,5 @@ func (s CommonEnable) Exec(req *md.ReqContext, res *md.ResContext) error {
 	return nil
 }
 func (s CommonEnable) GetRule() md.RuleRegister {
-	return md.RuleRegister{Code: "enable", Owner: "common"}
+	return md.RuleRegister{Code: "enable", OwnerType: md.RuleType_Widget, OwnerID: "common"}
 }

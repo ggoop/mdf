@@ -30,5 +30,5 @@ func (s CommonEnableBatch) Exec(req *md.ReqContext, res *md.ResContext) error {
 	return nil
 }
 func (s CommonEnableBatch) GetRule() md.RuleRegister {
-	return md.RuleRegister{Code: "enable_batch", Owner: "common"}
+	return md.RuleRegister{Code: "enable_batch", OwnerType: md.RuleType_Widget, OwnerID: "common"}
 }

@@ -16,7 +16,6 @@ type ReqContext struct {
 	OwnerID   string                 `json:"owner_id"  form:"owner_id"`
 	OwnerType string                 `json:"owner_type"  form:"owner_type"`
 	Domain    string                 `json:"domain" form:"domain"`
-	Widget    string                 `json:"widget" form:"widget"`  //页面ID
 	Params    map[string]interface{} `json:"params"  form:"params"` //一般指 页面 URI 参数
 	ID        string                 `json:"id" form:"id"`
 	IDS       []string               `json:"ids" form:"ids"`
@@ -75,8 +74,7 @@ func (s ReqContext) Copy() ReqContext {
 	return ReqContext{
 		OwnerType: s.OwnerType, OwnerID: s.OwnerID, Domain: s.Domain,
 		ID: s.ID, IDS: s.IDS, UserID: s.UserID, EntID: s.EntID, OrgID: s.OrgID,
-		Widget: s.Widget,
-		Page:   s.Page, PageSize: s.PageSize, Q: s.Q,
+		Page: s.Page, PageSize: s.PageSize, Q: s.Q,
 		Action: s.Action, Rule: s.Rule,
 		URI: s.URI, Method: s.Method,
 		Condition: s.Condition, Entity: s.Entity, Data: s.Data,
@@ -152,6 +150,10 @@ func DoAction(req ReqContext) ResContext {
 				glog.Error("找不到规则", glog.Any("rule", r))
 			}
 		}
+	} else {
+		if rule, ok := GetActionRule(RuleRegister{Domain: req.Domain, OwnerType: req.OwnerType, OwnerID: req.OwnerID, Code: req.Action}); ok {
+			rules = append(rules, rule)
+		}
 	}
 	if len(rules) == 0 {
 		res.Error = glog.Error("没有找到任何规则可执行！")
@@ -187,5 +189,5 @@ const (
 )
 
 func (s RuleRegister) GetKey() string {
-	return fmt.Sprintf("%s", strings.ToLower(s.Code))
+	return fmt.Sprintf("%s:%s", strings.ToLower(s.OwnerType), strings.ToLower(s.Code))
 }

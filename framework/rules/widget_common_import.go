@@ -22,7 +22,7 @@ func NewCommonImport(repo *repositories.MysqlRepo) *CommonImport {
 }
 func (s *CommonImport) Exec(req *md.ReqContext, res *md.ResContext) error {
 	log := service.NewLogSv(s.repo)
-	logData := model.Log{EntID: req.EntID, UserID: req.UserID, NodeType: req.Command, NodeID: req.Widget, DataID: req.Entity}
+	logData := model.Log{EntID: req.EntID, UserID: req.UserID, NodeType: req.OwnerType, NodeID: req.OwnerID, DataID: req.Entity}
 	log.CreateLog(logData.Clone().SetMsg("导入开始======begin======"))
 
 	defer func() {
@@ -64,7 +64,7 @@ func (s *CommonImport) doMultiple(req *md.ReqContext, res *md.ResContext, entity
 }
 func (s *CommonImport) importMapData(req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, datas []map[string]interface{}) error {
 	log := service.NewLogSv(s.repo)
-	logData := model.Log{EntID: req.EntID, UserID: req.UserID, NodeType: req.Command, NodeID: req.Widget, DataID: req.Entity}
+	logData := model.Log{EntID: req.EntID, UserID: req.UserID, NodeType: req.OwnerType, NodeID: req.OwnerID, DataID: req.Entity}
 	log.CreateLog(logData.Clone().SetMsg(fmt.Sprintf("接收到需要导入的数据-%s：%v条", req.Entity, len(datas))))
 
 	dbDatas := make([]map[string]interface{}, 0)
@@ -216,5 +216,5 @@ func (s *CommonImport) batchInsertSave(entity *md.MDEntity, quoted []string, pla
 }
 
 func (s *CommonImport) GetRule() md.RuleRegister {
-	return md.RuleRegister{Code: "import", Owner: "common"}
+	return md.RuleRegister{Code: "import", OwnerType: md.RuleType_Widget, OwnerID: "common"}
 }

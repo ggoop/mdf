@@ -6,12 +6,12 @@ type MDToolbars struct {
 	ID        string          `gorm:"primary_key;size:36" json:"id"`
 	CreatedAt utils.Time      `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt utils.Time      `gorm:"name:更新时间" json:"updated_at"`
-	EntID     string          `gorm:"size:36;name:企业" json:"ent_id"`
-	WidgetID  string          `gorm:"size:36;name:组件ID" json:"widget_id"`
+	EntID     string          `gorm:"size:36;name:企业;not null" json:"ent_id"`
+	WidgetID  string          `gorm:"size:36;name:组件ID;not null" json:"widget_id"`
 	LayoutID  string          `gorm:"size:36;name:布局ID" json:"layout_id"`
-	Code      string          `gorm:"size:36;name:编码" json:"code"`
+	Code      string          `gorm:"size:36;name:编码;not null" json:"code"`
 	Name      string          `gorm:"size:50;name:名称" json:"name"`
-	Type      string          `gorm:"size:20;name:类型" json:"type"`
+	Type      string          `gorm:"size:20;name:类型;not null" json:"type"`
 	Mount     string          `gorm:"size:20;name:加载方式" json:"mount"`
 	Sequence  int             `gorm:"size:3;name:顺序" json:"sequence"`
 	Align     string          `gorm:"size:20;name:对齐方式" json:"align"`
@@ -28,12 +28,12 @@ type MDToolbarItem struct {
 	ID        string          `gorm:"primary_key;size:36" json:"id"`
 	CreatedAt utils.Time      `gorm:"name:创建时间" json:"created_at"`
 	UpdatedAt utils.Time      `gorm:"name:更新时间" json:"updated_at"`
-	EntID     string          `gorm:"size:36;name:企业" json:"ent_id"`
-	WidgetID  string          `gorm:"size:36;name:组件ID" json:"widget_id"`
-	ToolbarID string          `gorm:"size:36;name:工具栏" json:"toolbar_id"`
+	EntID     string          `gorm:"size:36;name:企业;not null" json:"ent_id"`
+	WidgetID  string          `gorm:"size:36;name:组件ID;not null" json:"widget_id"`
+	ToolbarID string          `gorm:"size:36;unique_index:uix_code;name:工具栏;not null" json:"toolbar_id"`
 	ParentID  string          `gorm:"size:36;name:上级" json:"parent_id"`
 	Children  []MDToolbarItem `gorm:"-" json:"children"`
-	Code      string          `gorm:"size:36;name:编码" json:"code"`
+	Code      string          `gorm:"size:36;unique_index:uix_code;name:编码;not null" json:"code"`
 	Name      string          `gorm:"size:50;name:名称" json:"name"`
 	Type      string          `gorm:"size:20;name:类型" json:"type"`
 	Caption   string          `gorm:"size:50;name:标题" json:"caption"`

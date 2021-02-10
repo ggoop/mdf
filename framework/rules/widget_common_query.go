@@ -17,7 +17,7 @@ func NewCommonQuery(repo *repositories.MysqlRepo) *CommonQuery {
 	return &CommonQuery{repo}
 }
 func (s *CommonQuery) GetRule() md.RuleRegister {
-	return md.RuleRegister{Code: "query", Owner: "common"}
+	return md.RuleRegister{Code: "query", OwnerType: md.RuleType_Widget, OwnerID: "common"}
 }
 
 func (s CommonQuery) Exec(req *md.ReqContext, res *md.ResContext) error {
