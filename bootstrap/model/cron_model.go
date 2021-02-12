@@ -1,7 +1,6 @@
 package model
 
 import (
-	"github.com/ggoop/mdf/framework/context"
 	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 )
@@ -16,17 +15,17 @@ const (
 
 type Cron struct {
 	md.Model
-	ClientID string          `gorm:"size:50"`
-	EntID    string          `gorm:"size:50"`
-	UserID   string          `gorm:"size:50"`
-	Tag      string          `json:"tag"`
-	Code     string          `json:"code"`
-	Name     string          `json:"name"`
-	Memo     string          `json:"memo"`
-	StatusID string          `gorm:"size:50" json:"status_id"` //waiting,running,completed
-	Status   *md.MDEnum      `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;limit:sys.corn.status"`
-	Enabled  utils.SBool     `gorm:"default:true" json:"enabled"`
-	Context  context.Context `gorm:"type:text;name:上下文" json:"context"` //上下文参数
+	ClientID string             `gorm:"size:50"`
+	EntID    string             `gorm:"size:50"`
+	UserID   string             `gorm:"size:50"`
+	Tag      string             `json:"tag"`
+	Code     string             `json:"code"`
+	Name     string             `json:"name"`
+	Memo     string             `json:"memo"`
+	StatusID string             `gorm:"size:50" json:"status_id"` //waiting,running,completed
+	Status   *md.MDEnum         `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;limit:sys.corn.status"`
+	Enabled  utils.SBool        `gorm:"default:true" json:"enabled"`
+	Context  utils.TokenContext `gorm:"type:text;name:上下文" json:"context"` //上下文参数
 
 	//调度任务周期
 	NeTime int64      `json:"ne_time"` //下次执行时间 ,unix

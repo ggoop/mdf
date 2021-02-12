@@ -13,12 +13,6 @@ func Reset() {
 func Print(v ...interface{}) {
 	Default.Print(v...)
 }
-
-// Println prints a log message without levels and colors.
-// It adds a new line at the end.
-func Println(v ...interface{}) {
-	Default.sugar.Info(v...)
-}
 func CheckAndPrintError(flag string, err error) {
 	Default.CheckAndPrintError(flag, err)
 }

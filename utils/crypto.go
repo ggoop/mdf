@@ -73,7 +73,7 @@ func CreateJWTToken(dic map[string]interface{}, SIGNED_KEY string) string {
 	//加密算法是HS256时，这里的SignedString必须是[]byte（）类型
 	ss, err := token.SignedString([]byte(SIGNED_KEY))
 	if err != nil {
-		glog.Println("token生成签名错误,err=%v", err)
+		glog.Infof("token生成签名错误,err=%v", err)
 		return ""
 	}
 	return base64.StdEncoding.EncodeToString([]byte(ss))

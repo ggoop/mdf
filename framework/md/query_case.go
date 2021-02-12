@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ggoop/mdf/framework/context"
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/di"
 	"github.com/ggoop/mdf/framework/glog"
@@ -14,25 +13,25 @@ import (
 
 type QueryCase struct {
 	Model
-	EntID     string          `gorm:"size:50" json:"ent_id"`
-	UserID    string          `gorm:"size:50" json:"user_id"`
-	QueryID   string          `gorm:"size:50;name:查询" json:"query_id"`
-	Query     *Query          `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;name:查询" json:"query"`
-	Name      string          `gorm:"name:名称" json:"name"`
-	ScopeID   string          `gorm:"size:50;name:范围ID" json:"scope_id"`
-	ScopeType string          `gorm:"size:50;name:范围类型" json:"scope_type"`
-	Memo      string          `gorm:"name:备注" json:"memo"`
-	Page      int             `gorm:"name:页码" json:"page"`
-	PageSize  int             `gorm:"name:每页显示记录数" json:"page_size"`
-	Columns   []QueryColumn   `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;foreignkey:OwnerID;name:栏目集合" json:"columns"`
-	Orders    []QueryOrder    `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;foreignkey:OwnerID;name:排序集合" json:"orders"`
-	Wheres    []QueryWhere    `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;foreignkey:OwnerID;name:条件集合" json:"wheres"`
-	Filters   []QueryFilter   `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;foreignkey:QueryID;association_foreignkey:QueryID;name:过滤集合" json:"filters"`
-	Context   context.Context `gorm:"type:text;name:上下文" json:"context"` //上下文参数
-	Export    utils.SBool     `gorm:"name:是否导出" json:"export"`
-	IsDefault utils.SBool     `gorm:"name:默认" json:"is_default"`
-	Condition string          `gorm:"size:200;name:条件" json:"condition"` //条件
-	Q         string          `gorm:"size:200;name:关键字" json:"q"`        //关键字
+	EntID     string             `gorm:"size:50" json:"ent_id"`
+	UserID    string             `gorm:"size:50" json:"user_id"`
+	QueryID   string             `gorm:"size:50;name:查询" json:"query_id"`
+	Query     *Query             `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;name:查询" json:"query"`
+	Name      string             `gorm:"name:名称" json:"name"`
+	ScopeID   string             `gorm:"size:50;name:范围ID" json:"scope_id"`
+	ScopeType string             `gorm:"size:50;name:范围类型" json:"scope_type"`
+	Memo      string             `gorm:"name:备注" json:"memo"`
+	Page      int                `gorm:"name:页码" json:"page"`
+	PageSize  int                `gorm:"name:每页显示记录数" json:"page_size"`
+	Columns   []QueryColumn      `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;foreignkey:OwnerID;name:栏目集合" json:"columns"`
+	Orders    []QueryOrder       `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;foreignkey:OwnerID;name:排序集合" json:"orders"`
+	Wheres    []QueryWhere       `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;foreignkey:OwnerID;name:条件集合" json:"wheres"`
+	Filters   []QueryFilter      `gorm:"association_autoupdate:false;association_autocreate:false;association_save_reference:false;foreignkey:QueryID;association_foreignkey:QueryID;name:过滤集合" json:"filters"`
+	Context   utils.TokenContext `gorm:"type:text;name:上下文" json:"context"` //上下文参数
+	Export    utils.SBool        `gorm:"name:是否导出" json:"export"`
+	IsDefault utils.SBool        `gorm:"name:默认" json:"is_default"`
+	Condition string             `gorm:"size:200;name:条件" json:"condition"` //条件
+	Q         string             `gorm:"size:200;name:关键字" json:"q"`        //关键字
 }
 
 func (s *QueryCase) MD() *Mder {
@@ -223,7 +222,7 @@ func (s *QueryCase) queryWhereToIWhere(value QueryWhere) IQWhere {
 		}
 	} else if value.Expr == "" && value.Field != "" && value.Value.Valid() && value.Value.GetString() != "" && s.Context.IsValid() && (value.Operator == "=p" || value.Operator == "<>p" || value.Operator == ">p" || value.Operator == ">=p" || value.Operator == "<p" || value.Operator == "<=p") {
 		item.Query = fmt.Sprintf("$$%v %s ?", value.Field, strings.Replace(value.Operator, "p", "", -1))
-		item.Args = []interface{}{s.Context.GetValue(strings.Replace(value.Value.GetString(), "@", "", -1))}
+		item.Args = []interface{}{s.Context.GetString(strings.Replace(value.Value.GetString(), "@", "", -1))}
 	} else if value.Expr != "" {
 		//表达式 模式
 		item.Query = value.Expr

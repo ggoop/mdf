@@ -1,18 +1,23 @@
 module github.com/ggoop/mdf
 
-go 1.13
+go 1.15
 
 require (
-	github.com/gin-gonic/gin v1.6.3 // indirect
-	github.com/go-playground/validator/v10 v10.4.1 // indirect
-	github.com/golang/protobuf v1.4.3 // indirect
-	github.com/json-iterator/go v1.1.10 // indirect
-	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
-	github.com/ugorji/go v1.2.4 // indirect
-	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c // indirect
-	google.golang.org/protobuf v1.25.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
+	github.com/360EntSecGroup-Skylar/excelize v1.4.1
+	github.com/denisenkom/go-mssqldb v0.9.0
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/go-playground/validator/v10 v10.4.1
+	github.com/go-sql-driver/mysql v1.5.0
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/golang/protobuf v1.3.2
+	github.com/mattn/go-isatty v0.0.3
+	github.com/robfig/cron v1.2.0
+	github.com/shopspring/decimal v1.2.0
+	github.com/spf13/viper v1.7.1
+	github.com/ugorji/go/codec v1.2.4
+	go.uber.org/dig v1.10.0
+	go.uber.org/zap v1.16.0
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
+	gopkg.in/yaml.v2 v2.2.4
+
 )

@@ -2,10 +2,9 @@ package md
 
 import (
 	"fmt"
+	"github.com/ggoop/mdf/utils"
 	"regexp"
 	"strings"
-
-	"github.com/ggoop/mdf/framework/context"
 )
 
 type OQLStatement struct {
@@ -29,11 +28,11 @@ type OQL struct {
 	having   []*OQLWhere
 	offset   int64
 	limit    int64
-	context  *context.Context
+	context  *utils.TokenContext
 	actuator OQLActuator
 }
 
-func (s *OQL) SetContext(context *context.Context) *OQL {
+func (s *OQL) SetContext(context *utils.TokenContext) *OQL {
 	s.context = context
 	return s
 }

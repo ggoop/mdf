@@ -8,7 +8,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ggoop/mdf/framework/configs"
 	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 
@@ -392,7 +391,7 @@ func (s *ExcelSv) ToExcel(data *ToExcel) (*FileData, error) {
 		fileData.FileName = fmt.Sprintf("%s.%s", utils.GUID(), "xlsx")
 	}
 	if fileData.Dir == "" {
-		fileData.Dir = path.Join(configs.Default.App.Storage, "exports", utils.NewTime().Format("200601"))
+		fileData.Dir = path.Join(utils.DefaultConfig.App.Storage, "exports", utils.NewTime().Format("200601"))
 	}
 	utils.CreatePath(fileData.Dir)
 	fileData.FullPath = utils.JoinCurrentPath(path.Join(fileData.Dir, fileData.FileName))

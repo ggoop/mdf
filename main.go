@@ -1,9 +1,7 @@
 package main
 
-import (
-	"github.com/ggoop/mdf/bootstrap"
-)
+import "github.com/ggoop/mdf/bootstrap"
 
 func main() {
-	bootstrap.StartHttp()
+	bootstrap.Start()
 }

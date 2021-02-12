@@ -53,7 +53,7 @@ func NowFunc() time.Time {
 	return time.Now()
 }
 
-func (l *Logger) sqlLog(values ...interface{}) {
+func (l *logger) sqlLog(values ...interface{}) {
 	if len(values) > 1 {
 		var (
 			sql             string

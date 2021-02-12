@@ -7,7 +7,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ggoop/mdf/framework/context"
 	"github.com/ggoop/mdf/framework/db/gorm"
 	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
@@ -28,7 +27,7 @@ type IExector interface {
 	Order(query string, args ...interface{}) IExector
 	Group(query string, args ...interface{}) IExector
 	Page(page, pageSize int) IExector
-	SetContext(context *context.Context) IExector
+	SetContext(context *utils.TokenContext) IExector
 	SetFieldDataTypes(dataTypes map[string]string) IExector
 	SetFieldDataType(field, dataType string) IExector
 	Clone() IExector
@@ -51,7 +50,7 @@ type exector struct {
 	groups    []*oqlGroup
 	page      int
 	pageSize  int
-	context   *context.Context
+	context   *utils.TokenContext
 }
 
 func NewExector(query string) IExector {
@@ -232,7 +231,7 @@ func (m *exector) PrepareQuery(mysql *repositories.MysqlRepo) (*gorm.DB, error) 
 			r, _ := regexp.Compile(REGEXP_VAR_EXP)
 			matched := r.FindAllStringSubmatch(whereExpr, -1)
 			for _, match := range matched {
-				v := m.context.GetValue(utils.SnakeString(match[1]))
+				v := m.context.GetString(match[1])
 				whereExpr = strings.ReplaceAll(whereExpr, match[0], "'"+v+"'")
 			}
 		}
@@ -609,7 +608,7 @@ func (m *exector) From(query string) IExector {
 	}
 	return m
 }
-func (m *exector) SetContext(context *context.Context) IExector {
+func (m *exector) SetContext(context *utils.TokenContext) IExector {
 	m.context = context
 	return m
 }
