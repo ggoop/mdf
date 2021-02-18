@@ -3,6 +3,8 @@ package routes
 import "github.com/ggoop/mdf/gin"
 
 func Register(engine *gin.Engine) {
-	mdRoute := engine.Group("api")
-	apiMd(mdRoute)
+	routeView(engine)
+	routeApi(engine)
+	routeProxy(engine)
+	routeDti(engine)
 }

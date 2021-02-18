@@ -23,7 +23,7 @@ func (e GError) Error() string {
 
 // err : error ,
 // code :x xx xxx xxxx,level-product-app-number 10bit
-func NewError(err interface{}, code ...int) GError {
+func ToError(err interface{}, code ...int) GError {
 	var e error
 	if v, ok := err.(GError); ok {
 		e = v

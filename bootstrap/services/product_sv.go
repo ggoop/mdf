@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/ggoop/mdf/db"
 	"sort"
 	"sync"
 
@@ -9,41 +10,47 @@ import (
 	"github.com/ggoop/mdf/framework/files"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/utils"
-
-	"github.com/ggoop/mdf/framework/db/repositories"
 )
 
-type ProductSv struct {
-	*sync.Mutex
-	repo *repositories.MysqlRepo
+type IProductSv interface {
 }
+
+type productSvImpl struct {
+	*sync.Mutex
+}
+
+func ProductSv() IProductSv {
+	return productSv
+}
+
+var productSv IProductSv = newProductSv()
 
 /**
 * 创建服务实例
  */
-func NewProductSv(repo *repositories.MysqlRepo) *ProductSv {
-	return &ProductSv{repo: repo, Mutex: &sync.Mutex{}}
+func newProductSv() *productSvImpl {
+	return &productSvImpl{Mutex: &sync.Mutex{}}
 }
 
-func (s *ProductSv) BatchImport(entID string, datas []files.ImportData) error {
+func (s *productSvImpl) BatchImport(entID string, datas []files.ImportData) error {
 	nameList := make(map[string]int)
 	nameList["product"] = 1
 	nameList["package"] = 2
 	nameList["host"] = 3
 	nameList["service"] = 4
-	sort.Slice(datas, func(i, j int) bool { return nameList[datas[i].Name] < nameList[datas[j].Name] })
+	sort.Slice(datas, func(i, j int) bool { return nameList[datas[i].SheetName] < nameList[datas[j].SheetName] })
 	for i, item := range datas {
-		if item.Name == "product" {
+		if item.SheetName == "product" {
 			if _, err := s.importProduct(entID, datas[i]); err != nil {
 				return err
 			}
 		}
-		if item.Name == "host" {
+		if item.SheetName == "host" {
 			if _, err := s.importHost(entID, datas[i]); err != nil {
 				return err
 			}
 		}
-		if item.Name == "service" {
+		if item.SheetName == "service" {
 			if _, err := s.importService(entID, datas[i]); err != nil {
 				return err
 			}
@@ -51,38 +58,38 @@ func (s *ProductSv) BatchImport(entID string, datas []files.ImportData) error {
 	}
 	return nil
 }
-func (s *ProductSv) importProduct(entID string, datas files.ImportData) (int, error) {
-	if len(datas.Datas) == 0 {
+func (s *productSvImpl) importProduct(entID string, datas files.ImportData) (int, error) {
+	if len(datas.Data) == 0 {
 		return 0, nil
 	}
-	for i, row := range datas.Datas {
+	for i, row := range datas.Data {
 		item := &model.Product{}
-		if cValue := files.GetMapStringValue("Code", row); cValue != "" {
+		if cValue := files.GetCellValue("Code", row); cValue != "" {
 			item.Code = cValue
 		}
-		if cValue := files.GetMapStringValue("Name", row); cValue != "" {
+		if cValue := files.GetCellValue("Name", row); cValue != "" {
 			item.Name = cValue
 		}
 		if item.Code == "" {
 			glog.Error("产品编码为空", glog.Int("Line", i))
 			continue
 		}
-		item.Icon = files.GetMapStringValue("Icon", row)
+		item.Icon = files.GetCellValue("Icon", row)
 		item.EntID = entID
 		s.SaveProduct(item)
 	}
 	return 0, nil
 }
-func (s *ProductSv) importHost(entID string, datas files.ImportData) (int, error) {
-	if len(datas.Datas) == 0 {
+func (s *productSvImpl) importHost(entID string, datas files.ImportData) (int, error) {
+	if len(datas.Data) == 0 {
 		return 0, nil
 	}
-	for i, row := range datas.Datas {
+	for i, row := range datas.Data {
 		item := &model.ProductHost{}
-		if cValue := files.GetMapStringValue("Code", row); cValue != "" {
+		if cValue := files.GetCellValue("Code", row); cValue != "" {
 			item.Code = cValue
 		}
-		if cValue := files.GetMapStringValue("Name", row); cValue != "" {
+		if cValue := files.GetCellValue("Name", row); cValue != "" {
 			item.Name = cValue
 		}
 		if item.Code == "" {
@@ -94,16 +101,16 @@ func (s *ProductSv) importHost(entID string, datas files.ImportData) (int, error
 	}
 	return 0, nil
 }
-func (s *ProductSv) importService(entID string, datas files.ImportData) (int, error) {
+func (s *productSvImpl) importService(entID string, datas files.ImportData) (int, error) {
 	s.Lock()
 	defer s.Unlock()
-	if len(datas.Datas) == 0 {
+	if len(datas.Data) == 0 {
 		return 0, nil
 	}
-	for i, row := range datas.Datas {
+	for i, row := range datas.Data {
 		//product
 		product := &model.Product{}
-		if cValue := files.GetMapStringValue("ProductCode", row); cValue != "" {
+		if cValue := files.GetCellValue("ProductCode", row); cValue != "" {
 			product, _ = s.GetProductByCode(entID, cValue)
 		}
 		if product == nil || product.Code == "" {
@@ -112,15 +119,15 @@ func (s *ProductSv) importService(entID string, datas files.ImportData) (int, er
 		}
 		//host
 		phost := &model.ProductHost{}
-		if cValue := files.GetMapStringValue("HostCode", row); cValue != "" {
+		if cValue := files.GetCellValue("HostCode", row); cValue != "" {
 			phost, _ = s.GetHostByCode(entID, cValue)
 		}
 		//model
 		pmodule := &model.ProductModule{ProductID: product.ID}
-		if cValue := files.GetMapStringValue("ModuleCode", row); cValue != "" {
+		if cValue := files.GetCellValue("ModuleCode", row); cValue != "" {
 			pmodule.Code = cValue
 		}
-		if cValue := files.GetMapStringValue("ModuleName", row); cValue != "" {
+		if cValue := files.GetCellValue("ModuleName", row); cValue != "" {
 			pmodule.Name = cValue
 		}
 		if pmodule.Code == "" {
@@ -132,10 +139,10 @@ func (s *ProductSv) importService(entID string, datas files.ImportData) (int, er
 
 		//service
 		pService := &model.ProductService{ProductID: product.ID, ModuleID: pmodule.ID}
-		if cValue := files.GetMapStringValue("ServiceCode", row); cValue != "" {
+		if cValue := files.GetCellValue("ServiceCode", row); cValue != "" {
 			pService.Code = cValue
 		}
-		if cValue := files.GetMapStringValue("ServiceName", row); cValue != "" {
+		if cValue := files.GetCellValue("ServiceName", row); cValue != "" {
 			pService.Name = cValue
 		}
 		if pService.Code == "" {
@@ -146,22 +153,22 @@ func (s *ProductSv) importService(entID string, datas files.ImportData) (int, er
 			pService.HostID = phost.ID
 		}
 
-		pService.AppUri = files.GetMapStringValue("AppUri", row)
-		pService.Uri = files.GetMapStringValue("Uri", row)
-		pService.InApp = files.GetMapSBoolValue("InApp", row)
-		pService.Schema = files.GetMapStringValue("Schema", row)
+		pService.AppUri = files.GetCellValue("AppUri", row)
+		pService.Uri = files.GetCellValue("Uri", row)
+		pService.InApp = utils.ToSBool(files.GetCellValue("InApp", row))
+		pService.Schema = files.GetCellValue("Schema", row)
 
-		pService.Tags = files.GetMapStringValue("Tags", row)
-		pService.Memo = files.GetMapStringValue("Memo", row)
-		pService.BizType = files.GetMapStringValue("BizType", row)
-		pService.Icon = files.GetMapStringValue("Icon", row)
+		pService.Tags = files.GetCellValue("Tags", row)
+		pService.Memo = files.GetCellValue("Memo", row)
+		pService.BizType = files.GetCellValue("BizType", row)
+		pService.Icon = files.GetCellValue("Icon", row)
 
-		pService.InWeb = files.GetMapSBoolValue("InWeb", row)
-		pService.IsMaster = utils.SBool_Parse(files.GetMapBoolValue("IsMaster", row, false))
-		pService.IsSlave = utils.SBool_Parse(files.GetMapBoolValue("IsSlave", row, false))
-		pService.IsDefault = utils.SBool_Parse(files.GetMapBoolValue("IsDefault", row, false))
+		pService.InWeb = utils.ToSBool(files.GetCellValue("InWeb", row))
+		pService.IsMaster = utils.ToSBool(files.GetCellValue("IsMaster", row))
+		pService.IsSlave = utils.ToSBool(files.GetCellValue("IsSlave", row))
+		pService.IsDefault = utils.ToSBool(files.GetCellValue("IsDefault", row))
 
-		pService.Sequence = files.GetMapIntValue("Sequence", row)
+		pService.Sequence = utils.ToInt(files.GetCellValue("Sequence", row))
 		if pService.Sequence <= 0 {
 			pService.Sequence = i + 1
 		}
@@ -172,16 +179,16 @@ func (s *ProductSv) importService(entID string, datas files.ImportData) (int, er
 }
 
 /*============product===========*/
-func (s *ProductSv) SaveProduct(item *model.Product) (*model.Product, error) {
+func (s *productSvImpl) SaveProduct(item *model.Product) (*model.Product, error) {
 	if item.EntID == "" || item.Code == "" {
 		return nil, errors.ParamsRequired("entid or code")
 	}
 	oldItem := model.Product{}
 	if item.ID != "" {
-		s.repo.Model(item).Where("id=?", item.ID).Take(&oldItem)
+		db.Default().Model(item).Where("id=?", item.ID).Take(&oldItem)
 	}
 	if oldItem.ID == "" && item.Code != "" {
-		s.repo.Model(item).Where("code=? and ent_id=?", item.Code, item.EntID).Take(&oldItem)
+		db.Default().Model(item).Where("code=? and ent_id=?", item.Code, item.EntID).Take(&oldItem)
 	}
 	if oldItem.ID != "" {
 		updates := make(map[string]interface{})
@@ -189,55 +196,55 @@ func (s *ProductSv) SaveProduct(item *model.Product) (*model.Product, error) {
 			updates["Name"] = item.Name
 		}
 		if len(updates) > 0 {
-			s.repo.Model(oldItem).Where("id=?", oldItem.ID).Updates(updates)
+			db.Default().Model(oldItem).Where("id=?", oldItem.ID).Updates(updates)
 		}
 		item.ID = oldItem.ID
 	} else {
 		if item.ID == "" {
 			item.ID = utils.GUID()
 		}
-		item.CreatedAt = utils.NewTime()
-		s.repo.Create(item)
+		item.CreatedAt = utils.TimeNow()
+		db.Default().Create(item)
 	}
 	return item, nil
 }
-func (s *ProductSv) GetProductByCode(entID, idOrCode string) (*model.Product, error) {
+func (s *productSvImpl) GetProductByCode(entID, idOrCode string) (*model.Product, error) {
 	old := model.Product{}
-	if err := s.repo.Where("ent_id=? and (code=? or id=?)", entID, idOrCode, idOrCode).Take(&old).Error; err != nil {
+	if err := db.Default().Where("ent_id=? and (code=? or id=?)", entID, idOrCode, idOrCode).Take(&old).Error; err != nil {
 		return nil, err
 	}
 	return &old, nil
 }
-func (s *ProductSv) DeleteProducts(entID string, ids []string) error {
+func (s *productSvImpl) DeleteProducts(entID string, ids []string) error {
 	systemRoles := 0
-	s.repo.Model(model.Product{}).Where("ent_id=? and id in (?) and `system`=1", entID, ids).Count(&systemRoles)
+	db.Default().Model(model.Product{}).Where("ent_id=? and id in (?) and `system`=1", entID, ids).Count(&systemRoles)
 	if systemRoles > 0 {
-		return utils.NewError("系统预制产品不能删除!")
+		return utils.ToError("系统预制产品不能删除!")
 	}
-	if err := s.repo.Delete(model.Product{}, "ent_id=? and id in (?)", entID, ids).Error; err != nil {
+	if err := db.Default().Delete(model.Product{}, "ent_id=? and id in (?)", entID, ids).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 /*==================host============*/
-func (s *ProductSv) GetHostByCode(entID, idOrCode string) (*model.ProductHost, error) {
+func (s *productSvImpl) GetHostByCode(entID, idOrCode string) (*model.ProductHost, error) {
 	old := model.ProductHost{}
-	if err := s.repo.Where("ent_id=? and (code=? or id=?)", entID, idOrCode, idOrCode).Take(&old).Error; err != nil {
+	if err := db.Default().Where("ent_id=? and (code=? or id=?)", entID, idOrCode, idOrCode).Take(&old).Error; err != nil {
 		return nil, err
 	}
 	return &old, nil
 }
-func (s *ProductSv) SaveHosts(item *model.ProductHost) (*model.ProductHost, error) {
+func (s *productSvImpl) SaveHosts(item *model.ProductHost) (*model.ProductHost, error) {
 	if item.EntID == "" || item.Code == "" {
 		return nil, errors.ParamsRequired("entid or code")
 	}
 	oldItem := model.ProductHost{}
 	if item.ID != "" {
-		s.repo.Model(item).Where("id=?", item.ID).Take(&oldItem)
+		db.Default().Model(item).Where("id=?", item.ID).Take(&oldItem)
 	}
 	if oldItem.ID == "" && item.Code != "" {
-		s.repo.Model(item).Where("code=? and ent_id=?", item.Code, item.EntID).Take(&oldItem)
+		db.Default().Model(item).Where("code=? and ent_id=?", item.Code, item.EntID).Take(&oldItem)
 	}
 	if oldItem.ID != "" {
 		updates := make(map[string]interface{})
@@ -253,7 +260,7 @@ func (s *ProductSv) SaveHosts(item *model.ProductHost) (*model.ProductHost, erro
 		updates["ProdHost"] = item.ProdHost
 
 		if len(updates) > 0 {
-			s.repo.Model(oldItem).Where("id=?", oldItem.ID).Updates(updates)
+			db.Default().Model(oldItem).Where("id=?", oldItem.ID).Updates(updates)
 		}
 		item.ID = oldItem.ID
 
@@ -264,41 +271,41 @@ func (s *ProductSv) SaveHosts(item *model.ProductHost) (*model.ProductHost, erro
 		if item.Name == "" {
 			item.Name = item.Code
 		}
-		item.CreatedAt = utils.NewTime()
-		s.repo.Create(item)
+		item.CreatedAt = utils.TimeNow()
+		db.Default().Create(item)
 	}
 	return item, nil
 }
-func (s *ProductSv) DeleteHosts(entID string, ids []string) error {
+func (s *productSvImpl) DeleteHosts(entID string, ids []string) error {
 	systemDatas := 0
-	s.repo.Model(model.ProductHost{}).Where("ent_id=? and id in (?) and `system`=1", entID, ids).Count(&systemDatas)
+	db.Default().Model(model.ProductHost{}).Where("ent_id=? and id in (?) and `system`=1", entID, ids).Count(&systemDatas)
 	if systemDatas > 0 {
-		return utils.NewError("系统预制不能删除!")
+		return utils.ToError("系统预制不能删除!")
 	}
-	if err := s.repo.Delete(model.ProductHost{}, "ent_id=? and id in (?)", entID, ids).Error; err != nil {
+	if err := db.Default().Delete(model.ProductHost{}, "ent_id=? and id in (?)", entID, ids).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 /*==================modules============*/
-func (s *ProductSv) GetModuleByCode(entID, idOrCode string) (*model.ProductModule, error) {
+func (s *productSvImpl) GetModuleByCode(entID, idOrCode string) (*model.ProductModule, error) {
 	old := model.ProductModule{}
-	if err := s.repo.Where("ent_id=? and (code=? or id=?)", entID, idOrCode, idOrCode).Take(&old).Error; err != nil {
+	if err := db.Default().Where("ent_id=? and (code=? or id=?)", entID, idOrCode, idOrCode).Take(&old).Error; err != nil {
 		return nil, err
 	}
 	return &old, nil
 }
-func (s *ProductSv) SaveModules(item *model.ProductModule) (*model.ProductModule, error) {
+func (s *productSvImpl) SaveModules(item *model.ProductModule) (*model.ProductModule, error) {
 	if item.EntID == "" || item.Code == "" {
 		return nil, errors.ParamsRequired("entid or code")
 	}
 	oldItem := model.ProductModule{}
 	if item.ID != "" {
-		s.repo.Model(item).Where("id=?", item.ID).Take(&oldItem)
+		db.Default().Model(item).Where("id=?", item.ID).Take(&oldItem)
 	}
 	if oldItem.ID == "" && item.Code != "" {
-		s.repo.Model(item).Where("code=? and ent_id=?", item.Code, item.EntID).Take(&oldItem)
+		db.Default().Model(item).Where("code=? and ent_id=?", item.Code, item.EntID).Take(&oldItem)
 	}
 	if oldItem.ID != "" {
 		updates := make(map[string]interface{})
@@ -306,7 +313,7 @@ func (s *ProductSv) SaveModules(item *model.ProductModule) (*model.ProductModule
 			updates["Name"] = item.Name
 		}
 		if len(updates) > 0 {
-			s.repo.Model(oldItem).Where("id=?", oldItem.ID).Updates(updates)
+			db.Default().Model(oldItem).Where("id=?", oldItem.ID).Updates(updates)
 		}
 		item.ID = oldItem.ID
 
@@ -314,34 +321,34 @@ func (s *ProductSv) SaveModules(item *model.ProductModule) (*model.ProductModule
 		if item.ID == "" {
 			item.ID = utils.GUID()
 		}
-		item.CreatedAt = utils.NewTime()
-		s.repo.Create(item)
+		item.CreatedAt = utils.TimeNow()
+		db.Default().Create(item)
 	}
 	return item, nil
 }
-func (s *ProductSv) DeleteModules(entID string, ids []string) error {
+func (s *productSvImpl) DeleteModules(entID string, ids []string) error {
 	systemDatas := 0
-	s.repo.Model(model.ProductModule{}).Where("ent_id=? and id in (?) and `system`=1", entID, ids).Count(&systemDatas)
+	db.Default().Model(model.ProductModule{}).Where("ent_id=? and id in (?) and `system`=1", entID, ids).Count(&systemDatas)
 	if systemDatas > 0 {
-		return utils.NewError("系统预制不能删除!")
+		return utils.ToError("系统预制不能删除!")
 	}
-	if err := s.repo.Delete(model.ProductModule{}, "ent_id=? and id in (?)", entID, ids).Error; err != nil {
+	if err := db.Default().Delete(model.ProductModule{}, "ent_id=? and id in (?)", entID, ids).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 //service
-func (s *ProductSv) SaveService(item *model.ProductService) (*model.ProductService, error) {
+func (s *productSvImpl) SaveService(item *model.ProductService) (*model.ProductService, error) {
 	if item.EntID == "" || item.Code == "" || item.ProductID == "" {
 		return nil, errors.ParamsRequired("entid or code or ProductID")
 	}
 	oldItem := model.ProductService{}
 	if item.ID != "" {
-		s.repo.Model(item).Where("id=?", item.ID).Take(&oldItem)
+		db.Default().Model(item).Where("id=?", item.ID).Take(&oldItem)
 	}
 	if oldItem.ID == "" && item.Code != "" {
-		s.repo.Model(item).Where("code=? and ent_id=?", item.Code, item.EntID).Take(&oldItem)
+		db.Default().Model(item).Where("code=? and ent_id=?", item.Code, item.EntID).Take(&oldItem)
 	}
 	if oldItem.ID != "" {
 		updates := make(map[string]interface{})
@@ -402,31 +409,31 @@ func (s *ProductSv) SaveService(item *model.ProductService) (*model.ProductServi
 			updates["IsDefault"] = item.IsDefault
 		}
 		if len(updates) > 0 {
-			s.repo.Model(oldItem).Where("id=?", oldItem.ID).Updates(updates)
+			db.Default().Model(oldItem).Where("id=?", oldItem.ID).Updates(updates)
 		}
 		item.ID = oldItem.ID
 
 	} else {
 		item.ID = utils.GUID()
-		item.CreatedAt = utils.NewTime()
-		s.repo.Create(item)
+		item.CreatedAt = utils.TimeNow()
+		db.Default().Create(item)
 	}
 	return item, nil
 }
-func (s *ProductSv) GetServiceByCode(entID, idOrCode string) (*model.ProductService, error) {
+func (s *productSvImpl) GetServiceByCode(entID, idOrCode string) (*model.ProductService, error) {
 	old := model.ProductService{}
-	if err := s.repo.Where("ent_id=? and (code=? or id=?)", entID, idOrCode, idOrCode).Take(&old).Error; err != nil {
+	if err := db.Default().Where("ent_id=? and (code=? or id=?)", entID, idOrCode, idOrCode).Take(&old).Error; err != nil {
 		return nil, err
 	}
 	return &old, nil
 }
-func (s *ProductSv) DeleteServices(entID string, ids []string) error {
+func (s *productSvImpl) DeleteServices(entID string, ids []string) error {
 	systemRoles := 0
-	s.repo.Model(model.ProductService{}).Where("ent_id=? and id in (?) and `system`=1", entID, ids).Count(&systemRoles)
+	db.Default().Model(model.ProductService{}).Where("ent_id=? and id in (?) and `system`=1", entID, ids).Count(&systemRoles)
 	if systemRoles > 0 {
-		return utils.NewError("系统预制不能删除!")
+		return utils.ToError("系统预制不能删除!")
 	}
-	if err := s.repo.Delete(model.ProductService{}, "ent_id=? and id in (?)", entID, ids).Error; err != nil {
+	if err := db.Default().Delete(model.ProductService{}, "ent_id=? and id in (?)", entID, ids).Error; err != nil {
 		return err
 	}
 	return nil

@@ -2,72 +2,73 @@ package rules
 
 import (
 	"fmt"
+	"github.com/ggoop/mdf/db"
 	"strings"
 
-	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 )
 
-type CommonSave struct {
-	repo *repositories.MysqlRepo
+type commonSave struct {
 }
 
-func NewCommonSave(repo *repositories.MysqlRepo) *CommonSave {
-	return &CommonSave{repo}
+func newCommonSave() *commonSave {
+	return &commonSave{}
 }
-func (s *CommonSave) Exec(token *utils.TokenContext, req *md.ReqContext, res *md.ResContext) error {
+func (s *commonSave) Exec(token *utils.TokenContext, req *md.ReqContext, res *md.ResContext) {
 	reqData := make(map[string]interface{})
 	if data, ok := req.Data.(map[string]interface{}); !ok {
-		return glog.Error("data数据格式不正确")
+		res.SetError("data数据格式不正确")
+		return
 	} else {
 		reqData = data
 	}
 	if reqData == nil {
-		return glog.Error("没有要保存的数据！")
+		res.SetError("没有要保存的数据！")
+		return
 	}
 	//查找实体信息
-	entity := md.GetEntity(req.Entity)
+	entity := md.MDSv().GetEntity(req.Entity)
 	if entity == nil {
-		return glog.Error("找不到实体！")
+		res.SetError("找不到实体！")
+		return
 	}
 	state := ""
-	if s, ok := reqData[md.STATE_FIELD]; ok && s != nil {
+	if s, ok := reqData[utils.STATE_FIELD]; ok && s != nil {
 		state = s.(string)
 	}
-	if state == md.STATE_UPDATED && req.ID == "" {
+	if state == utils.STATE_UPDATED && req.ID == "" {
 
 	}
 	//如果有ID，则为修改保存
 	if req.ID != "" {
 		oldData := make(map[string]interface{})
-		exector := md.NewExector(entity.TableName)
+		exector := md.NewOQL().From(entity.TableName)
 		for _, f := range entity.Fields {
-			if f.TypeType == md.TYPE_SIMPLE {
+			if f.TypeType == utils.TYPE_SIMPLE {
 				exector.Select(f.Code)
-				if f.TypeID != "" && f.DbName != "" {
-					exector.SetFieldDataType(f.DbName, f.TypeID)
-				}
 			}
 		}
 		exector.Where("id=?", req.ID)
-		if datas, err := exector.Query(s.repo); err != nil {
-			return err
+		datas := make([]map[string]interface{}, 0)
+		if err := exector.Find(&datas).Error(); err != nil {
+			res.SetError(err)
+			return
 		} else if len(datas) > 0 {
 			oldData = datas[0]
 		}
 		if len(oldData) == 0 {
-			return glog.Error("找不到要修改的数据！")
+			res.SetError("找不到要修改的数据！")
+			return
 		}
-		return s.doActionUpdate(token, req, res, entity, reqData, oldData)
+		s.doActionUpdate(token, req, res, entity, reqData, oldData)
 	} else {
-		return s.doActionCreate(token, req, res, entity, reqData)
+		s.doActionCreate(token, req, res, entity, reqData)
 	}
-	return nil
 }
 
-func (s *CommonSave) fillEntityDefaultValue(entity *md.MDEntity, data map[string]interface{}) map[string]interface{} {
+func (s *commonSave) fillEntityDefaultValue(entity *md.MDEntity, data map[string]interface{}) map[string]interface{} {
 	for _, field := range entity.Fields {
 		//如果字段设置了默认值，且没有传入字段值时，取默认值
 		if field.DbName != "" && field.DefaultValue != "" {
@@ -78,11 +79,11 @@ func (s *CommonSave) fillEntityDefaultValue(entity *md.MDEntity, data map[string
 	}
 	return data
 }
-func (s *CommonSave) dataToEntityData(entity *md.MDEntity, data map[string]interface{}) map[string]interface{} {
+func (s *commonSave) dataToEntityData(entity *md.MDEntity, data map[string]interface{}) map[string]interface{} {
 	changeData := make(map[string]interface{})
 	for di, dv := range data {
 		field := entity.GetField(di)
-		if field == nil || field.TypeType != md.TYPE_SIMPLE {
+		if field == nil || field.TypeType != utils.TYPE_SIMPLE {
 			continue
 		}
 		dbFieldName := field.DbName
@@ -98,9 +99,9 @@ func (s *CommonSave) dataToEntityData(entity *md.MDEntity, data map[string]inter
 		if field == nil {
 			continue
 		}
-		if field.TypeType == md.TYPE_ENTITY || field.TypeType == md.TYPE_ENUM {
+		if field.TypeType == utils.TYPE_ENTITY || field.TypeType == utils.TYPE_ENUM {
 			dbField := entity.GetField(field.Code + "ID")
-			if dbField == nil || dbField.TypeType != md.TYPE_SIMPLE || dbField.DbName == "" {
+			if dbField == nil || dbField.TypeType != utils.TYPE_SIMPLE || dbField.DbName == "" {
 				continue
 			}
 			if obj, is := dv.(map[string]interface{}); is && obj != nil && obj["id"] != nil {
@@ -113,7 +114,7 @@ func (s *CommonSave) dataToEntityData(entity *md.MDEntity, data map[string]inter
 	}
 	return changeData
 }
-func (s *CommonSave) doActionCreate(token *utils.TokenContext, req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, reqData map[string]interface{}) error {
+func (s *commonSave) doActionCreate(token *utils.TokenContext, req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, reqData map[string]interface{}) error {
 	reqData["id"] = utils.GUID()
 	if sysField := entity.GetField("EntID"); sysField != nil && token.EntID() != "" {
 		reqData[sysField.DbName] = token.EntID()
@@ -123,11 +124,11 @@ func (s *CommonSave) doActionCreate(token *utils.TokenContext, req *md.ReqContex
 	}
 	fieldCreated := entity.GetField("CreatedAt")
 	if fieldCreated != nil && fieldCreated.DbName != "" {
-		reqData[fieldCreated.DbName] = utils.NewTime()
+		reqData[fieldCreated.DbName] = utils.TimeNow()
 	}
 	fieldUpdatedAt := entity.GetField("UpdatedAt")
 	if fieldUpdatedAt != nil && fieldUpdatedAt.DbName != "" {
-		reqData[fieldUpdatedAt.DbName] = utils.NewTime()
+		reqData[fieldUpdatedAt.DbName] = utils.TimeNow()
 	}
 	//取传入的值
 	changeData := s.dataToEntityData(entity, reqData)
@@ -167,12 +168,12 @@ func (s *CommonSave) doActionCreate(token *utils.TokenContext, req *md.ReqContex
 		if vv, is := v.(utils.SJson); is && !vv.Valid() {
 			continue
 		}
-		fields = append(fields, s.repo.Dialect().Quote(f))
+		fields = append(fields, db.Default().Dialect().Quote(f))
 		placeholders = append(placeholders, "?")
 		values = append(values, v)
 	}
-	sql := fmt.Sprintf("insert into %s (%s) values (%s)", s.repo.Dialect().Quote(entity.TableName), strings.Join(fields, ","), strings.Join(placeholders, ","))
-	if err := s.repo.Table(entity.TableName).Exec(sql, values...).Error; err != nil {
+	sql := fmt.Sprintf("insert into %s (%s) values (%s)", db.Default().Dialect().Quote(entity.TableName), strings.Join(fields, ","), strings.Join(placeholders, ","))
+	if err := db.Default().Table(entity.TableName).Exec(sql, values...).Error; err != nil {
 		return err
 	}
 	//处理树节点标识
@@ -182,9 +183,9 @@ func (s *CommonSave) doActionCreate(token *utils.TokenContext, req *md.ReqContex
 			updates := make(map[string]interface{})
 			updates[isLeafField.DbName] = 0
 			if fieldUpdatedAt != nil && fieldUpdatedAt.DbName != "" {
-				updates[fieldUpdatedAt.DbName] = utils.NewTime()
+				updates[fieldUpdatedAt.DbName] = utils.TimeNow()
 			}
-			if err := s.repo.Table(entity.TableName).Where("id=?", parentID).Updates(updates).Error; err != nil {
+			if err := db.Default().Table(entity.TableName).Where("id=?", parentID).Updates(updates).Error; err != nil {
 				return err
 			}
 		}
@@ -196,10 +197,10 @@ func (s *CommonSave) doActionCreate(token *utils.TokenContext, req *md.ReqContex
 	res.Set("data", changeData)
 	return nil
 }
-func (s *CommonSave) doActionUpdate(token *utils.TokenContext, req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, reqData map[string]interface{}, oldData map[string]interface{}) error {
+func (s *commonSave) doActionUpdate(token *utils.TokenContext, req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, reqData map[string]interface{}, oldData map[string]interface{}) error {
 	fieldUpdatedAt := entity.GetField("UpdatedAt")
 	if fieldUpdatedAt != nil && fieldUpdatedAt.DbName != "" {
-		reqData[fieldUpdatedAt.DbName] = utils.NewTime()
+		reqData[fieldUpdatedAt.DbName] = utils.TimeNow()
 	}
 	if sysField := entity.GetField("ID"); sysField != nil && req.ID != "" {
 		reqData[sysField.DbName] = req.ID
@@ -220,8 +221,8 @@ func (s *CommonSave) doActionUpdate(token *utils.TokenContext, req *md.ReqContex
 		fieldType := strings.ToLower(field.TypeID)
 		//布尔类型判断
 		if fieldType == "bool" || fieldType == "boolean" {
-			newV := utils.SBool_Parse(nv)
-			oldV := utils.SBool_Parse(oldValue)
+			newV := utils.ToSBool(nv)
+			oldV := utils.ToSBool(oldValue)
 			if !newV.Valid() || newV.Equal(oldV) {
 				isChanged = false
 			}
@@ -252,7 +253,7 @@ func (s *CommonSave) doActionUpdate(token *utils.TokenContext, req *md.ReqContex
 	}
 	if len(changeData) > 0 {
 		//开始保存数据
-		if err := s.repo.Table(entity.TableName).Where("id=?", req.ID).Updates(changeData).Error; err != nil {
+		if err := db.Default().Table(entity.TableName).Where("id=?", req.ID).Updates(changeData).Error; err != nil {
 			return err
 		}
 	}
@@ -273,9 +274,9 @@ func (s *CommonSave) doActionUpdate(token *utils.TokenContext, req *md.ReqContex
 					updates := make(map[string]interface{})
 					updates[isLeafField.DbName] = utils.SBool_False
 					if fieldUpdatedAt != nil && fieldUpdatedAt.DbName != "" {
-						updates[fieldUpdatedAt.DbName] = utils.NewTime()
+						updates[fieldUpdatedAt.DbName] = utils.TimeNow()
 					}
-					if err := s.repo.Table(entity.TableName).Where("id=?", newParentID).Updates(updates).Error; err != nil {
+					if err := db.Default().Table(entity.TableName).Where("id=?", newParentID).Updates(updates).Error; err != nil {
 						return err
 					}
 				}
@@ -283,14 +284,14 @@ func (s *CommonSave) doActionUpdate(token *utils.TokenContext, req *md.ReqContex
 					count := 0
 					updates := make(map[string]interface{})
 					if fieldUpdatedAt != nil && fieldUpdatedAt.DbName != "" {
-						updates[fieldUpdatedAt.DbName] = utils.NewTime()
+						updates[fieldUpdatedAt.DbName] = utils.TimeNow()
 					}
-					if s.repo.Table(entity.TableName).Where(fmt.Sprintf("%s=?", fieldParent.DbName), oldParentID).Count(&count); count == 0 {
+					if db.Default().Table(entity.TableName).Where(fmt.Sprintf("%s=?", fieldParent.DbName), oldParentID).Count(&count); count == 0 {
 						updates[isLeafField.DbName] = 1
 					} else {
 						updates[isLeafField.DbName] = 0
 					}
-					if err := s.repo.Table(entity.TableName).Where("id=?", oldParentID).Updates(updates).Error; err != nil {
+					if err := db.Default().Table(entity.TableName).Where("id=?", oldParentID).Updates(updates).Error; err != nil {
 						return err
 					}
 				}
@@ -301,7 +302,7 @@ func (s *CommonSave) doActionUpdate(token *utils.TokenContext, req *md.ReqContex
 	return nil
 }
 
-func (s *CommonSave) saveRelationData(token *utils.TokenContext, req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, reqData map[string]interface{}) error {
+func (s *commonSave) saveRelationData(token *utils.TokenContext, req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, reqData map[string]interface{}) error {
 	for _, nv := range entity.Fields {
 		if nv.Kind == md.KIND_TYPE_HAS_MANT {
 			if do, ok := reqData[nv.DbName].([]interface{}); ok && len(do) > 0 {
@@ -309,7 +310,7 @@ func (s *CommonSave) saveRelationData(token *utils.TokenContext, req *md.ReqCont
 					if ds, ok := dr.(map[string]interface{}); ok {
 						state := ""
 
-						if s, ok := ds[md.STATE_FIELD]; ok && s != nil {
+						if s, ok := ds[utils.STATE_FIELD]; ok && s != nil {
 							state = s.(string)
 						}
 						if state == "" {
@@ -317,25 +318,25 @@ func (s *CommonSave) saveRelationData(token *utils.TokenContext, req *md.ReqCont
 							continue
 						}
 
-						newReq := req.New()
+						newReq := md.NewReqContext()
 						newReq.OwnerType = req.OwnerType
 						newReq.OwnerID = req.OwnerID
-						refEntity := md.GetEntity(nv.TypeID)
+						refEntity := md.MDSv().GetEntity(nv.TypeID)
 						if f := refEntity.GetField(nv.ForeignKey); f != nil {
 							ds[f.DbName] = reqData["id"]
 						}
 						ruleID := ""
-						if state == md.STATE_CREATED || state == md.STATE_UPDATED {
+						if state == utils.STATE_CREATED || state == utils.STATE_UPDATED {
 							ruleID = "save"
 						}
-						if state == md.STATE_DELETED {
+						if state == utils.STATE_DELETED {
 							ruleID = "delete"
 						}
 						if ruleID == "" {
 							glog.Error("该状态找不到对应规则", glog.String("state", state))
 							continue
 						}
-						if state == md.STATE_UPDATED || state == md.STATE_DELETED {
+						if state == utils.STATE_UPDATED || state == utils.STATE_DELETED {
 							if id, ok := ds["id"].(string); ok && id != "" {
 								newReq.ID = id
 							}
@@ -344,7 +345,7 @@ func (s *CommonSave) saveRelationData(token *utils.TokenContext, req *md.ReqCont
 						newReq.Entity = refEntity.ID
 						newReq.Rule = ruleID
 
-						if rtn := md.DoAction(token, &newReq); rtn.Error() != nil {
+						if rtn := md.ActionSv().DoAction(token, &newReq); rtn.Error() != nil {
 							return rtn.Error()
 						}
 					}
@@ -355,9 +356,9 @@ func (s *CommonSave) saveRelationData(token *utils.TokenContext, req *md.ReqCont
 	}
 	return nil
 }
-func (s *CommonSave) dataCheck(req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, data map[string]interface{}) error {
+func (s *commonSave) dataCheck(req *md.ReqContext, res *md.ResContext, entity *md.MDEntity, data map[string]interface{}) error {
 	return nil
 }
-func (s *CommonSave) GetRule() md.RuleRegister {
+func (s *commonSave) Register() md.RuleRegister {
 	return md.RuleRegister{Code: "save", OwnerType: md.RuleType_Widget, OwnerID: "common"}
 }

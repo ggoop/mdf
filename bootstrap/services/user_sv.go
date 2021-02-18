@@ -2,31 +2,38 @@ package services
 
 import (
 	"fmt"
+	"github.com/ggoop/mdf/db"
 
 	"github.com/ggoop/mdf/bootstrap/model"
-	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/utils"
 )
 
-type UserSv struct {
-	repo *repositories.MysqlRepo
+type IUserSv interface {
+}
+type userSvImpl struct {
+}
+
+var userSv IUserSv = newUserSvImpl()
+
+func UserSv() IUserSv {
+	return userSv
 }
 
 /**
 * 创建服务实例
  */
-func NewUserSv(repo *repositories.MysqlRepo) *UserSv {
-	return &UserSv{repo: repo}
+func newUserSvImpl() *userSvImpl {
+	return &userSvImpl{}
 }
 
-func (s *UserSv) GetUserBy(id string) (*model.User, error) {
+func (s *userSvImpl) GetUserBy(id string) (*model.User, error) {
 	item := model.User{}
-	if err := s.repo.Model(item).Where("id=?", id).Take(&item).Error; err != nil {
+	if err := db.Default().Model(item).Where("id=?", id).Take(&item).Error; err != nil {
 		return nil, err
 	}
 	return &item, nil
 }
-func (s *UserSv) UpdateUser(id string, datas map[string]interface{}) error {
+func (s *userSvImpl) UpdateUser(id string, datas map[string]interface{}) error {
 	item, err := s.GetUserBy(id)
 	if err != nil {
 		return err
@@ -41,31 +48,31 @@ func (s *UserSv) UpdateUser(id string, datas map[string]interface{}) error {
 		}
 	}
 	if len(updates) > 0 {
-		s.repo.Model(&model.User{}).Where("id=?", id).Updates(updates)
+		db.Default().Model(&model.User{}).Where("id=?", id).Updates(updates)
 	}
 	return nil
 }
 
 //账号
-func (s *UserSv) GetUserByAccount(account string) (*model.User, error) {
+func (s *userSvImpl) GetUserByAccount(account string) (*model.User, error) {
 	acc := model.User{}
-	if err := s.repo.Model(acc).Where("email=? or mobile=? or account=?", account, account, account).Take(&acc).Error; err != nil {
+	if err := db.Default().Model(acc).Where("email=? or mobile=? or account=?", account, account, account).Take(&acc).Error; err != nil {
 		return nil, err
 	}
 	return &acc, nil
 }
-func (s *UserSv) SetPassword(userID, password string) error {
+func (s *userSvImpl) SetPassword(userID, password string) error {
 	account := model.User{}
-	if err := s.repo.Take(&account, "id=?", userID).Error; err != nil {
+	if err := db.Default().Take(&account, "id=?", userID).Error; err != nil {
 		return err
 	}
 	longPassword, _ := utils.AesCFBEncrypt(password, account.Openid)
-	s.repo.Model(account).Where("id=?", account.ID).Update("Password", longPassword)
+	db.Default().Model(account).Where("id=?", account.ID).Update("Password", longPassword)
 	return nil
 }
-func (s *UserSv) ExistsEmail(email string, excludeIds ...string) bool {
+func (s *userSvImpl) ExistsEmail(email string, excludeIds ...string) bool {
 	count := 0
-	q := s.repo.Model(model.User{}).Where("email=?", email)
+	q := db.Default().Model(model.User{}).Where("email=?", email)
 	if excludeIds != nil && len(excludeIds) > 0 {
 		q = q.Where("id not in (?)", excludeIds)
 	}
@@ -73,9 +80,9 @@ func (s *UserSv) ExistsEmail(email string, excludeIds ...string) bool {
 
 	return count > 0
 }
-func (s *UserSv) ExistsMobile(mobile string, excludeIds ...string) bool {
+func (s *userSvImpl) ExistsMobile(mobile string, excludeIds ...string) bool {
 	count := 0
-	q := s.repo.Model(model.User{}).Where("mobile=?", mobile)
+	q := db.Default().Model(model.User{}).Where("mobile=?", mobile)
 	if excludeIds != nil && len(excludeIds) > 0 {
 		q = q.Where("id not in (?)", excludeIds)
 	}
@@ -83,28 +90,28 @@ func (s *UserSv) ExistsMobile(mobile string, excludeIds ...string) bool {
 
 	return count > 0
 }
-func (s *UserSv) IssueUser(account *model.User) (*model.User, error) {
+func (s *userSvImpl) IssueUser(account *model.User) (*model.User, error) {
 	oldAcc := model.User{}
 	tag := false
 	//如果传入ID，则先按ID查询用户
 	if account.ID != "" {
-		s.repo.Model(oldAcc).Where("id=?", account.ID).Take(&oldAcc)
+		db.Default().Model(oldAcc).Where("id=?", account.ID).Take(&oldAcc)
 	}
 	//如果存在openid，则先按Openid查询用户
 	if account.Openid != "" && oldAcc.ID == "" {
-		s.repo.Model(oldAcc).Where("openid=?", account.Openid).Take(&oldAcc)
+		db.Default().Model(oldAcc).Where("openid=?", account.Openid).Take(&oldAcc)
 	}
 	if account.Mobile != "" && oldAcc.ID == "" {
 		tag = true
-		s.repo.Model(oldAcc).Where("mobile=?", account.Mobile).Take(&oldAcc)
+		db.Default().Model(oldAcc).Where("mobile=?", account.Mobile).Take(&oldAcc)
 	}
 	if account.Email != "" && oldAcc.ID == "" {
 		tag = true
-		s.repo.Model(oldAcc).Where("email=?", account.Email).Take(&oldAcc)
+		db.Default().Model(oldAcc).Where("email=?", account.Email).Take(&oldAcc)
 	}
 	if account.Account != "" && oldAcc.ID == "" {
 		tag = true
-		s.repo.Model(oldAcc).Where("account=?", account.Account).Take(&oldAcc)
+		db.Default().Model(oldAcc).Where("account=?", account.Account).Take(&oldAcc)
 	}
 	//如果是新创建，则
 	if oldAcc.ID == "" && !tag {
@@ -134,8 +141,8 @@ func (s *UserSv) IssueUser(account *model.User) (*model.User, error) {
 			updates["Password"], _ = utils.AesCFBEncrypt(account.Password, oldAcc.Openid)
 		}
 		if len(updates) > 0 {
-			s.repo.Model(oldAcc).Where("id=?", oldAcc.ID).Updates(updates)
-			s.repo.Where("id=?", oldAcc.ID).Take(&oldAcc)
+			db.Default().Model(oldAcc).Where("id=?", oldAcc.ID).Updates(updates)
+			db.Default().Where("id=?", oldAcc.ID).Take(&oldAcc)
 		}
 		account = &oldAcc
 	} else {
@@ -159,7 +166,7 @@ func (s *UserSv) IssueUser(account *model.User) (*model.User, error) {
 				return nil, fmt.Errorf("电子邮件 %s 已经被注册", account.Email)
 			}
 		}
-		if err := s.repo.Create(account).Error; err != nil {
+		if err := db.Default().Create(account).Error; err != nil {
 			return nil, err
 		}
 	}

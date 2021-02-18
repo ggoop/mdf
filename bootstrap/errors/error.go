@@ -10,9 +10,9 @@ func New(err interface{}, code int) utils.GError {
 	if v, ok := err.(utils.GError); ok {
 		return v
 	} else if v, ok := err.(error); ok {
-		return utils.NewError(v, code)
+		return utils.ToError(v, code)
 	} else {
-		return utils.NewError(v, code)
+		return utils.ToError(v, code)
 	}
 }
 func ParamsRequired(params ...string) utils.GError {

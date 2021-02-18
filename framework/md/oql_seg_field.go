@@ -1,5 +1,10 @@
 package md
 
+type OQLStatement struct {
+	Query    string
+	Args     []interface{}
+	Affected int64
+}
 type oqlEntity struct {
 	Path     string
 	Entity   *MDEntity
@@ -13,27 +18,36 @@ type oqlField struct {
 	Path   string
 }
 
-type IQFrom interface {
-	GetQuery() string
-	GetAlias() string
-	GetExpr() string
-}
-
-func (m *oqlFrom) GetQuery() string {
-	return m.Query
-}
-func (m *oqlFrom) GetAlias() string {
-	return m.Alias
-}
-func (m *oqlFrom) GetExpr() string {
-	return m.expr
+type OQLFrom interface {
+	Query() string
+	Alias() string
+	Args() []interface{}
+	Expr() string
+	setExpr(expr string)
 }
 
 type oqlFrom struct {
-	Query string
-	Alias string
-	Args  []interface{}
+	query string
+	alias string
+	args  []interface{}
 	expr  string
+}
+
+func (m *oqlFrom) Query() string {
+	return m.query
+}
+func (m *oqlFrom) Alias() string {
+	return m.alias
+}
+func (m *oqlFrom) Args() []interface{} {
+	return m.args
+}
+func (m *oqlFrom) Expr() string {
+	return m.expr
+}
+
+func (m oqlFrom) setExpr(expr string) {
+	m.expr = expr
 }
 
 type oqlJoin struct {

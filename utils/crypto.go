@@ -117,3 +117,12 @@ func ParseJWTTokenNotValidation(tokenString string, SIGNED_KEY string) (jwt.MapC
 	}
 	return claims, nil
 }
+
+/*
+  md5 sign: "123" -> "202cb962ac59075b964b07152d234b70"
+*/
+func Md5Signer(message string) string {
+	data := []byte(message)
+	has := md5.Sum(data)
+	return fmt.Sprintf("%x", has)
+}

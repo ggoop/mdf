@@ -19,7 +19,7 @@ type PagerRes struct {
 
 func (c *PagerRes) ToResource(obj *Pager) *Map {
 	rtn := Map{"data": nil}
-	if IsNil(obj) {
+	if obj == nil {
 		return &rtn
 	}
 	rtn["pager"] = ToPagerItem(obj)

@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"github.com/ggoop/mdf/db"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -17,7 +18,7 @@ import (
 )
 
 //上传
-func (s *OssSv) UploadObject(ossConfig *model.Oss, fileItem model.OssObject, file multipart.File, header *multipart.FileHeader) (*model.OssObject, error) {
+func (s *ossSvImpl) UploadObject(ossConfig *model.Oss, fileItem model.OssObject, file multipart.File, header *multipart.FileHeader) (*model.OssObject, error) {
 	if ossConfig != nil {
 		fileItem.OssID = ossConfig.ID
 		fileItem.OssType = ossConfig.Type
@@ -42,7 +43,7 @@ func (s *OssSv) UploadObject(ossConfig *model.Oss, fileItem model.OssObject, fil
 	return s.SaveObject(&fileItem)
 }
 
-func (s *OssSv) uploadObjectByLocal(item *model.Oss, fileItem *model.OssObject, file multipart.File) error {
+func (s *ossSvImpl) uploadObjectByLocal(item *model.Oss, fileItem *model.OssObject, file multipart.File) error {
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {
 		return err
@@ -68,7 +69,7 @@ func (s *OssSv) uploadObjectByLocal(item *model.Oss, fileItem *model.OssObject, 
 }
 
 // 获取文件对象存储目录,如 temp/，kdirl/ ，kdnfd/dkfdsf/,以/ 结尾
-func (s *OssSv) GetUploadObjectStoreDir(fileItem *model.OssObject) string {
+func (s *ossSvImpl) GetUploadObjectStoreDir(fileItem *model.OssObject) string {
 	fileKey := ""
 	tag := false
 	if fileItem.DirectoryID != "" { //指定文件夹时，按指定的文件夹存放
@@ -82,19 +83,19 @@ func (s *OssSv) GetUploadObjectStoreDir(fileItem *model.OssObject) string {
 		tag = true
 	}
 	if !tag { //存在到临时文件夹中
-		fileKey = filepath.Join(utils.NewTime().Format("200601"), fileKey)
+		fileKey = filepath.Join(utils.TimeNow().Format("200601"), fileKey)
 		tag = true
 	}
 	return fileKey + "/"
 }
-func (s *OssSv) DeleteObject(entID, id string) error {
+func (s *ossSvImpl) DeleteObject(entID, id string) error {
 	item, err := s.GetObjectBy(id)
 	if err != nil {
 		return err
 	}
 	count := 0
 	if item.Type == "dir" {
-		if s.repo.Model(model.OssObject{}).Where("directory_id=?", item.ID).Count(&count); count > 0 {
+		if db.Default().Model(model.OssObject{}).Where("directory_id=?", item.ID).Count(&count); count > 0 {
 			return fmt.Errorf("目录 %v 下存在 %v 个文件，不能被删除!", item.Name, count)
 		}
 	}
@@ -103,7 +104,7 @@ func (s *OssSv) DeleteObject(entID, id string) error {
 	if count > 0 {
 		return errors.IsQuoted(item.ID)
 	}
-	if err := s.repo.Delete(&item).Error; err != nil {
+	if err := db.Default().Delete(&item).Error; err != nil {
 		return err
 	}
 	if item.OssType == "local" {
@@ -111,19 +112,19 @@ func (s *OssSv) DeleteObject(entID, id string) error {
 	}
 	return nil
 }
-func (s *OssSv) ObjectMove(objectIDs []string, directoryID string) error {
+func (s *ossSvImpl) ObjectMove(objectIDs []string, directoryID string) error {
 	if obj, err := s.GetObjectBy(directoryID); err != nil {
 		return err
 	} else {
-		s.repo.Model(&model.OssObject{}).Where("id in (?)", objectIDs).Update("DirectoryID", obj.ID)
+		db.Default().Model(&model.OssObject{}).Where("id in (?)", objectIDs).Update("DirectoryID", obj.ID)
 	}
 	return nil
 }
-func (s *OssSv) ObjectUpdates(objectID string, updates map[string]interface{}) error {
+func (s *ossSvImpl) ObjectUpdates(objectID string, updates map[string]interface{}) error {
 	if obj, err := s.GetObjectBy(objectID); err != nil {
 		return err
 	} else if len(updates) > 0 {
-		s.repo.Model(&model.OssObject{}).Where("id =?", obj.ID).Updates(updates)
+		db.Default().Model(&model.OssObject{}).Where("id =?", obj.ID).Updates(updates)
 	}
 	return nil
 }

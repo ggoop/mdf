@@ -10,7 +10,7 @@ import (
 	"github.com/ggoop/mdf/utils"
 )
 
-func (s *OQL) parse() error {
+func (s *oqlImpl) parse() error {
 	for _, v := range s.froms {
 		s.parseFromField(v)
 	}
@@ -32,17 +32,17 @@ func (s *OQL) parse() error {
 	for _, v := range s.groups {
 		s.parseGroupField(v)
 	}
-	return s.Error
+	return s.error
 }
 
 //=============== build
-func (s *OQL) buildFroms() *OQLStatement {
+func (s *oqlImpl) buildFroms() *OQLStatement {
 	statement := &OQLStatement{}
 	queries := make([]string, 0)
 	args := make([]interface{}, 0)
 	for _, v := range s.froms {
-		queries = append(queries, v.expr)
-		args = append(args, v.Args...)
+		queries = append(queries, v.Expr())
+		args = append(args, v.Args()...)
 		statement.Affected++
 	}
 	statement.Query = strings.Join(queries, ",")
@@ -50,7 +50,7 @@ func (s *OQL) buildFroms() *OQLStatement {
 	return statement
 }
 
-func (s *OQL) buildJoins() *OQLStatement {
+func (s *oqlImpl) buildJoins() *OQLStatement {
 	statement := &OQLStatement{}
 	queries := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -75,7 +75,7 @@ func (s *OQL) buildJoins() *OQLStatement {
 			lkey := t.Entity.GetField(relationship.Field.AssociationKey)
 			condition := ""
 			tag := false
-			if relationship.Field.TypeType == TYPE_ENUM {
+			if relationship.Field.TypeType == utils.TYPE_ENUM {
 				if relationship.Field.Limit != "" {
 					condition = fmt.Sprintf(" and %v.entity_id=?", t.Alias)
 					queries = append(queries, fmt.Sprintf("left join %v  %v on %v.%v=%v.%v%v", t.Entity.TableName, t.Alias, t.Alias, "id", relationship.Entity.Alias, fkey.DbName, condition))
@@ -101,7 +101,7 @@ func (s *OQL) buildJoins() *OQLStatement {
 	}
 	return statement
 }
-func (s *OQL) buildSelects() *OQLStatement {
+func (s *oqlImpl) buildSelects() *OQLStatement {
 	statement := &OQLStatement{}
 	queries := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -116,40 +116,40 @@ func (s *OQL) buildSelects() *OQLStatement {
 	statement.Args = args
 	return statement
 }
-func (s *OQL) buildWheres() *OQLStatement {
+func (s *oqlImpl) buildWheres() *OQLStatement {
 	return s.buildWheresItem(s.wheres)
 }
 
-func (s *OQL) buildHaving() *OQLStatement {
+func (s *oqlImpl) buildHaving() *OQLStatement {
 	return s.buildWheresItem(s.having)
 }
-func (s *OQL) buildWheresItem(wheres []*OQLWhere) *OQLStatement {
+func (s *oqlImpl) buildWheresItem(wheres []OQLWhere) *OQLStatement {
 	statement := &OQLStatement{}
 	queries := make([]string, 0)
 	args := make([]interface{}, 0)
 	for _, v := range wheres {
-		sub := s.buildWheresItem(v.Children)
+		sub := s.buildWheresItem(v.Children())
 		statement.Affected += sub.Affected
 		//当前节点加上子节点条件
-		if v.expr != "" {
+		if v.Expr() != "" {
 			if len(queries) > 0 {
-				queries = append(queries, " ", v.Logical, " ")
+				queries = append(queries, " ", v.Logical(), " ")
 			}
 			//如果有子条件，则需要把子条件也加入到条件集合中
 			if sub.Query != "" {
 				// (a=b and (a=1 or a=2))
-				queries = append(queries, "((", v.expr, ") ", v.Logical, " ", sub.Query, ")")
+				queries = append(queries, "((", v.Expr(), ") ", v.Logical(), " ", sub.Query, ")")
 				args = append(args, s.getWhereArgs(v)...)
 				args = append(args, sub.Args...)
 			} else {
 				//没有子条件时，就只加当前条件
-				queries = append(queries, "(", v.expr, ")")
+				queries = append(queries, "(", v.Expr(), ")")
 				args = append(args, s.getWhereArgs(v)...)
 			}
 			statement.Affected++
 		} else if sub.Query != "" { //仅仅有子节点
 			if len(queries) > 0 {
-				queries = append(queries, " ", v.Logical, " ")
+				queries = append(queries, " ", v.Logical(), " ")
 			}
 			//如果子条件多于一个，则需要用括号包裹起来
 			if sub.Affected > 1 {
@@ -164,13 +164,13 @@ func (s *OQL) buildWheresItem(wheres []*OQLWhere) *OQLStatement {
 	statement.Query = strings.Join(queries, "")
 	return statement
 }
-func (s *OQL) getWhereArgs(where *OQLWhere) []interface{} {
-	if len(where.Args) <= 0 {
+func (s *oqlImpl) getWhereArgs(where OQLWhere) []interface{} {
+	if len(where.Args()) <= 0 {
 		return nil
 	}
-	args := where.Args
+	args := where.Args()
 	for i, item := range args {
-		if where.DataType == FIELD_TYPE_ENTITY || where.DataType == FIELD_TYPE_ENUM || where.DataType == "" {
+		if where.DataType() == utils.FIELD_TYPE_ENTITY || where.DataType() == utils.FIELD_TYPE_ENUM || where.DataType() == "" {
 			if v, ok := item.(map[string]interface{}); ok {
 				if v["_isRefObject"] != nil && v["id"] != nil {
 					args[i] = v["id"]
@@ -182,18 +182,18 @@ func (s *OQL) getWhereArgs(where *OQLWhere) []interface{} {
 			} else if v, ok := item.(utils.SJson); ok {
 				args[i] = v.GetValue()
 			}
-		} else if where.DataType == FIELD_TYPE_DATE {
-			args[i] = utils.CreateTime(item).Format(utils.Layout_YYYYMMDD)
-		} else if where.DataType == FIELD_TYPE_DATETIME {
-			args[i] = utils.CreateTime(item).Format(utils.Layout_YYYYMMDDHHIISS)
-		} else if where.DataType == FIELD_TYPE_BOOL {
-			args[i] = utils.SBool_Parse(item)
+		} else if where.DataType() == utils.FIELD_TYPE_DATE {
+			args[i] = utils.ToTime(item).Format(utils.Layout_YYYYMMDD)
+		} else if where.DataType() == utils.FIELD_TYPE_DATETIME {
+			args[i] = utils.ToTime(item).Format(utils.Layout_YYYYMMDDHHIISS)
+		} else if where.DataType() == utils.FIELD_TYPE_BOOL {
+			args[i] = utils.ToSBool(item)
 		}
 	}
 	return args
 }
 
-func (s *OQL) buildGroups() *OQLStatement {
+func (s *oqlImpl) buildGroups() *OQLStatement {
 	statement := &OQLStatement{}
 	queries := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -208,7 +208,7 @@ func (s *OQL) buildGroups() *OQLStatement {
 	statement.Args = args
 	return statement
 }
-func (s *OQL) buildOrders() *OQLStatement {
+func (s *oqlImpl) buildOrders() *OQLStatement {
 	statement := &OQLStatement{}
 	queries := make([]string, 0)
 	args := make([]interface{}, 0)
@@ -225,15 +225,15 @@ func (s *OQL) buildOrders() *OQLStatement {
 }
 
 //=============== parse
-func (s *OQL) parseFromField(value *oqlFrom) {
+func (s *oqlImpl) parseFromField(value OQLFrom) {
 	//主表，使用别名作路径
-	form := s.parseEntity(value.Query, value.Alias)
+	form := s.parseEntity(value.Query(), value.Alias())
 	parts := make([]string, 0)
 	if form == nil {
 		form = &oqlEntity{}
 
-		path := strings.ToLower(value.Alias)
-		form.Entity = &MDEntity{ID: value.Query, TableName: value.Query}
+		path := strings.ToLower(value.Alias())
+		form.Entity = &MDEntity{ID: value.Query(), TableName: value.Query()}
 		form.Sequence = len(s.entities) + 1
 		form.Alias = fmt.Sprintf("a%v", form.Sequence)
 		form.Path = path
@@ -244,9 +244,9 @@ func (s *OQL) parseFromField(value *oqlFrom) {
 	if form.Alias != "" {
 		parts = append(parts, form.Alias)
 	}
-	value.expr = strings.Join(parts, " ")
+	value.setExpr(strings.Join(parts, " "))
 }
-func (s *OQL) parseJoinField(value *oqlJoin) error {
+func (s *oqlImpl) parseJoinField(value *oqlJoin) error {
 	joins := make([]string, 0)
 	switch value.Type {
 	case OQL_LEFT_JOIN:
@@ -282,15 +282,15 @@ func (s *OQL) parseJoinField(value *oqlJoin) error {
 	value.expr = strings.Join(joins, " ")
 	return nil
 }
-func (s *OQL) parseWhereField(value *OQLWhere) {
-	value.expr = s.parseFieldExpr(value.Query)
-	if len(value.Children) > 0 {
-		for _, v := range value.Children {
+func (s *oqlImpl) parseWhereField(value OQLWhere) {
+	value.setExpr(s.parseFieldExpr(value.Query()))
+	if len(value.Children()) > 0 {
+		for _, v := range value.Children() {
 			s.parseWhereField(v)
 		}
 	}
 }
-func (s *OQL) parseSelectField(value *oqlSelect) {
+func (s *oqlImpl) parseSelectField(value *oqlSelect) {
 	expr := s.parseFieldExpr(value.Query)
 	if value.Alias != "" {
 		value.expr = fmt.Sprintf("%v as %v", expr, value.Alias)
@@ -298,10 +298,10 @@ func (s *OQL) parseSelectField(value *oqlSelect) {
 		value.expr = expr
 	}
 }
-func (s *OQL) parseGroupField(value *oqlGroup) {
+func (s *oqlImpl) parseGroupField(value *oqlGroup) {
 	value.expr = s.parseFieldExpr(value.Query)
 }
-func (s *OQL) parseOrderField(value *oqlOrder) {
+func (s *oqlImpl) parseOrderField(value *oqlOrder) {
 	expr := s.parseFieldExpr(value.Query)
 	if value.Order == OQL_ORDER_DESC {
 		value.expr = fmt.Sprintf("%v desc", expr)
@@ -315,7 +315,7 @@ func (s *OQL) parseOrderField(value *oqlOrder) {
 //	$$a.fieldA + sum( c.fieldA )	=>$$a.fieldA, c.fieldA
 // 函数与左括号之间不能有空格
 // 多级字段.号不能有空格
-func (s *OQL) parseFieldExpr(expr string) string {
+func (s *oqlImpl) parseFieldExpr(expr string) string {
 	if expr == "" {
 		return expr
 	}
@@ -335,20 +335,20 @@ func (s *OQL) parseFieldExpr(expr string) string {
 }
 
 // 解析实体
-func (s *OQL) formatEntity(entity *MDEntity) *oqlEntity {
+func (s *oqlImpl) formatEntity(entity *MDEntity) *oqlEntity {
 	e := oqlEntity{Entity: entity}
 	return &e
 }
-func (s *OQL) formatEntityField(entity *oqlEntity, field *MDField) *oqlField {
+func (s *oqlImpl) formatEntityField(entity *oqlEntity, field *MDField) *oqlField {
 	e := oqlField{Entity: entity, Field: field}
 	return &e
 }
-func (s *OQL) parseEntity(id, path string) *oqlEntity {
+func (s *oqlImpl) parseEntity(id, path string) *oqlEntity {
 	path = strings.ToLower(strings.TrimSpace(path))
 	if v, ok := s.entities[path]; ok {
 		return v
 	}
-	entity := GetEntity(id)
+	entity := MDSv().GetEntity(id)
 	if entity == nil {
 		err := glog.Errorf("找不到实体 %v", id)
 		s.AddErr(err)
@@ -363,18 +363,18 @@ func (s *OQL) parseEntity(id, path string) *oqlEntity {
 }
 
 // 解析字段
-func (s *OQL) parseEntityField(fieldPath string) (*oqlField, error) {
+func (s *oqlImpl) parseEntityField(fieldPath string) (*oqlField, error) {
 	fieldPath = strings.ToLower(strings.TrimSpace(fieldPath))
 	if v, ok := s.fields[fieldPath]; ok {
 		return v, nil
 	}
 	start := 0
 	parts := strings.Split(fieldPath, ".")
-	var mainFrom *oqlFrom
+	var mainFrom OQLFrom
 	if len(parts) > 1 {
 		//如果主表有别名，则第一个字段为表
 		for i, v := range s.froms {
-			if v.Alias != "" && strings.ToLower(v.Alias) == parts[0] {
+			if v.Alias() != "" && strings.ToLower(v.Alias()) == parts[0] {
 				mainFrom = s.froms[i]
 				start = 1
 				break
@@ -384,7 +384,7 @@ func (s *OQL) parseEntityField(fieldPath string) (*oqlField, error) {
 	if mainFrom == nil {
 		//如果没有找到主表，则说明字段没有 表作为导引
 		for i, v := range s.froms {
-			if v.Alias == "" {
+			if v.Alias() == "" {
 				mainFrom = s.froms[i]
 				break
 			}
@@ -394,7 +394,7 @@ func (s *OQL) parseEntityField(fieldPath string) (*oqlField, error) {
 		mainFrom = s.froms[0]
 	}
 	//主实体
-	entity := s.entities[strings.ToLower(mainFrom.Alias)]
+	entity := s.entities[strings.ToLower(mainFrom.Alias())]
 	if entity == nil {
 		return nil, nil
 	}

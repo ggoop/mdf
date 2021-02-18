@@ -162,7 +162,7 @@ func getConfigViper(name string) *viper.Viper {
 	_ENVMaps.Set(name, v)
 	return v
 }
-func NewInitConfig() {
+func newInitConfig() {
 	DefaultConfig = &Config{}
 	vp := getConfigViper(AppConfigName)
 	if err := vp.Unmarshal(&DefaultConfig); err != nil {

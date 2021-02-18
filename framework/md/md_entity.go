@@ -5,8 +5,6 @@ import (
 	"github.com/shopspring/decimal"
 	"strings"
 
-	"github.com/ggoop/mdf/framework/db/repositories"
-	"github.com/ggoop/mdf/framework/di"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/utils"
 )
@@ -111,22 +109,22 @@ func (s MDField) CompileValue(value interface{}) interface{} {
 	if value == nil || value == "" || s.TypeID == "" {
 		return nil
 	}
-	if s.TypeID == FIELD_TYPE_STRING || s.TypeID == FIELD_TYPE_TEXT || s.TypeID == FIELD_TYPE_XML {
+	if s.TypeID == utils.FIELD_TYPE_STRING || s.TypeID == utils.FIELD_TYPE_TEXT || s.TypeID == utils.FIELD_TYPE_XML {
 		return value
 	}
-	if s.TypeID == FIELD_TYPE_INT {
+	if s.TypeID == utils.FIELD_TYPE_INT {
 		return utils.ToInt(value)
 	}
-	if s.TypeID == FIELD_TYPE_BOOL {
-		return utils.SBool_Parse(value)
+	if s.TypeID == utils.FIELD_TYPE_BOOL {
+		return utils.ToSBool(value)
 	}
-	if s.TypeID == FIELD_TYPE_JSON {
-		return utils.SJson_Parse(value)
+	if s.TypeID == utils.FIELD_TYPE_JSON {
+		return utils.ToSBool(value)
 	}
-	if s.TypeID == FIELD_TYPE_DATE || s.TypeID == FIELD_TYPE_DATETIME {
-		return utils.CreateTime(value)
+	if s.TypeID == utils.FIELD_TYPE_DATE || s.TypeID == utils.FIELD_TYPE_DATETIME {
+		return utils.ToTime(value)
 	}
-	if s.TypeID == FIELD_TYPE_DECIMAL {
+	if s.TypeID == utils.FIELD_TYPE_DECIMAL {
 		if v, err := decimal.NewFromString(utils.ToString(value)); err != nil {
 			return glog.Error(err)
 		} else {
@@ -137,34 +135,4 @@ func (s MDField) CompileValue(value interface{}) interface{} {
 }
 func (s *MDField) MD() *Mder {
 	return &Mder{ID: "md.field", Domain: md_domain, Name: "属性"}
-}
-
-var mdCache map[string]*MDEntity
-
-func GetEntity(id string) *MDEntity {
-	defer func() {
-		if err := recover(); err != nil {
-			glog.Error(err)
-		}
-	}()
-	if mdCache == nil {
-		mdCache = make(map[string]*MDEntity)
-	}
-	if v, ok := mdCache[strings.ToLower(id)]; ok {
-		return v
-	}
-	item := &MDEntity{}
-	if err := di.Global.Invoke(func(db *repositories.MysqlRepo) {
-		db.Preload("Fields").Order("id").Take(item, "id=?", id)
-	}); err != nil {
-		repositories.Default().Preload("Fields").Order("id").Take(item, "id=?", id)
-	}
-	if item.ID != "" {
-		mdCache[strings.ToLower(item.ID)] = item
-		if item.TableName != "" {
-			mdCache[strings.ToLower(item.TableName)] = item
-		}
-		return item
-	}
-	return nil
 }

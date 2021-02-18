@@ -29,5 +29,5 @@ func Get(c *gin.Context) *utils.TokenContext {
 			return vv
 		}
 	}
-	return nil
+	return utils.NewTokenContext()
 }

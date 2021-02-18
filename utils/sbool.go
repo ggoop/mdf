@@ -17,7 +17,7 @@ var SBool_False = SBool{value: "0", valid: true}
 
 var SBool_Null = SBool{value: "", valid: false}
 
-func SBool_Parse(val interface{}) SBool {
+func ToSBool(val interface{}) SBool {
 	s := SBool{}
 	s.Parse(val)
 	return s

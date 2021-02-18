@@ -3,34 +3,38 @@ package services
 import (
 	"github.com/ggoop/mdf/gmap"
 	"strings"
-	"sync"
 )
 
-type CacheSv struct {
+type ICacheSv interface {
+	Push(key string, value interface{})
+	Has(key string) bool
+	Remove(key string)
+}
+type cacheSvImpl struct {
 	cache gmap.ConcurrentMap
 }
 
-var _cacheInstance *CacheSv
-var _cacheDefaultMu sync.Once
+var cacheSvInstance ICacheSv = newCacheSv()
 
-func NewCacheSv() *CacheSv {
-	_cacheDefaultMu.Do(func() {
-		_cacheInstance = &CacheSv{cache: gmap.New()}
-	})
-	return _cacheInstance
+func CacheSv() ICacheSv {
+	return cacheSvInstance
 }
-func (s *CacheSv) Push(key string, value interface{}) {
+func newCacheSv() *cacheSvImpl {
+	return &cacheSvImpl{cache: gmap.New()}
+}
+
+func (s *cacheSvImpl) Push(key string, value interface{}) {
 	s.cache.Set(strings.ToLower(key), value)
 }
-func (s *CacheSv) Get(key string) interface{} {
+func (s *cacheSvImpl) Get(key string) interface{} {
 	if val, ok := s.cache.Get(strings.ToLower(key)); ok {
 		return val
 	}
 	return nil
 }
-func (s *CacheSv) Has(key string) bool {
+func (s *cacheSvImpl) Has(key string) bool {
 	return s.cache.Has(strings.ToLower(key))
 }
-func (s *CacheSv) Remove(key string) {
+func (s *cacheSvImpl) Remove(key string) {
 	s.cache.Remove(strings.ToLower(key))
 }

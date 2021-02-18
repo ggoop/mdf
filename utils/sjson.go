@@ -16,7 +16,7 @@ type SJson struct {
 
 var SJson_Null = SJson{value: nil, jsonString: "", valid: false}
 
-func SJson_Parse(val interface{}) SJson {
+func ToSJson(val interface{}) SJson {
 	s := SJson{}
 	s.Parse(val)
 	return s

@@ -1,25 +1,21 @@
 package rules
 
 import (
-	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/md"
 )
 
 func Register() {
 	//注册到mof框架
-	md.RegisterActionRule(
-		NewCommonLoad(repositories.Default()),
-		NewCommonQuery(repositories.Default()),
-		NewCommonSave(repositories.Default()),
-		NewCommonImport(repositories.Default()),
+	md.ActionSv().RegisterRule(
+		newCommonQuery(),
+		newCommonSave(),
+		newCommonDelete(),
 
-		NewCommonDelete(repositories.Default()),
-		NewCommonDeleteBatch(repositories.Default()),
+		newCommonEnable(),
+		newCommonDisable(),
 
-		NewCommonEnable(repositories.Default()),
-		NewCommonEnableBatch(repositories.Default()),
+		newCommonImport(),
 
-		NewCommonDisable(repositories.Default()),
-		NewCommonDisableBatch(repositories.Default()),
+		newMdImportPre(),
 	)
 }

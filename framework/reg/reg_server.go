@@ -46,7 +46,7 @@ func (s *regStoreSv) register() {
 	})
 }
 func (s *regStoreSv) Online(item RegObject) {
-	item.Time = utils.NewTimePtr()
+	item.Time = utils.TimeNowPtr()
 	s.data[item.Key()] = &item
 	setRegObjectCache(item.Code, &item)
 

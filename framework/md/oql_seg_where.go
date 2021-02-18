@@ -1,54 +1,92 @@
 package md
 
-type OQLWhere struct {
+type OQLWhere interface {
+	And() OQLWhere
+	Or() OQLWhere
+
+	Where(query string, args ...interface{}) OQLWhere
+	OrWhere(query string, args ...interface{}) OQLWhere
+
+	Query() string
+	Logical() string
+	DataType() string
+	Children() []OQLWhere
+	Args() []interface{}
+	Expr() string
+	setExpr(expr string)
+}
+type oqlWhere struct {
 	//字段与操作号之间需要有空格
 	//示例1: Org =? ; Org in (?) ;$$Org =?  and ($$Period = ?  or $$Period = ? )
 	//示例2：abs($$Qty)>$$TempQty + ?
-	Query   string
-	Logical string //and or
+	query   string
+	logical string //and or
 	//参数值数据类型
-	DataType string
-	Sequence int
-	Children []*OQLWhere
-	Args     []interface{}
+	dataType string
+	sequence int
+	children []OQLWhere
+	args     []interface{}
 	expr     string
 }
 
-func NewOQLWhere(query string, args ...interface{}) *OQLWhere {
-	return &OQLWhere{Query: query, Args: args, Logical: "and"}
+func NewOQLWhere(query string, args ...interface{}) OQLWhere {
+	return &oqlWhere{query: query, args: args, logical: OQL_WHERE_LOGICAL_AND}
 }
-func (m OQLWhere) String() string {
-	return m.Query
+func (m oqlWhere) Query() string {
+	return m.query
 }
-func (m *OQLWhere) Where(query string, args ...interface{}) *OQLWhere {
-	if m.Children == nil {
-		m.Children = make([]*OQLWhere, 0)
+func (m oqlWhere) Logical() string {
+	return m.logical
+}
+func (m oqlWhere) DataType() string {
+	return m.dataType
+}
+func (m oqlWhere) Children() []OQLWhere {
+	return m.children
+}
+
+func (m oqlWhere) Args() []interface{} {
+	return m.args
+}
+func (m oqlWhere) Expr() string {
+	return m.expr
+}
+
+func (m oqlWhere) setExpr(expr string) {
+	m.expr = expr
+}
+func (m oqlWhere) String() string {
+	return m.query
+}
+func (m *oqlWhere) Where(query string, args ...interface{}) OQLWhere {
+	if m.children == nil {
+		m.children = make([]OQLWhere, 0)
 	}
-	item := &OQLWhere{Query: query, Args: args, Logical: "and"}
-	m.Children = append(m.Children, item)
+	item := &oqlWhere{query: query, args: args, logical: OQL_WHERE_LOGICAL_AND}
+	m.children = append(m.children, item)
 	return m
 }
-func (m *OQLWhere) OrWhere(query string, args ...interface{}) *OQLWhere {
-	if m.Children == nil {
-		m.Children = make([]*OQLWhere, 0)
+func (m *oqlWhere) OrWhere(query string, args ...interface{}) OQLWhere {
+	if m.children == nil {
+		m.children = make([]OQLWhere, 0)
 	}
-	item := &OQLWhere{Query: query, Args: args, Logical: "or"}
-	m.Children = append(m.Children, item)
+	item := &oqlWhere{query: query, args: args, logical: OQL_WHERE_LOGICAL_OR}
+	m.children = append(m.children, item)
 	return m
 }
-func (m *OQLWhere) And() *OQLWhere {
-	if m.Children == nil {
-		m.Children = make([]*OQLWhere, 0)
+func (m *oqlWhere) And() OQLWhere {
+	if m.children == nil {
+		m.children = make([]OQLWhere, 0)
 	}
-	item := &OQLWhere{Logical: "and"}
-	m.Children = append(m.Children, item)
+	item := &oqlWhere{logical: OQL_WHERE_LOGICAL_AND}
+	m.children = append(m.children, item)
 	return item
 }
-func (m *OQLWhere) Or() *OQLWhere {
-	if m.Children == nil {
-		m.Children = make([]*OQLWhere, 0)
+func (m *oqlWhere) Or() OQLWhere {
+	if m.children == nil {
+		m.children = make([]OQLWhere, 0)
 	}
-	item := &OQLWhere{Logical: "or"}
-	m.Children = append(m.Children, item)
+	item := &oqlWhere{logical: OQL_WHERE_LOGICAL_OR}
+	m.children = append(m.children, item)
 	return item
 }

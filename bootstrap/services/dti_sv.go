@@ -3,44 +3,53 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ggoop/mdf/bootstrap/errors"
+	"github.com/ggoop/mdf/bootstrap/model"
+	"github.com/ggoop/mdf/db"
+	"github.com/ggoop/mdf/framework/glog"
+	"github.com/ggoop/mdf/framework/reg"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
-	"time"
-
-	"github.com/ggoop/mdf/bootstrap/errors"
-	"github.com/ggoop/mdf/bootstrap/model"
-	"github.com/ggoop/mdf/framework/glog"
-	"github.com/ggoop/mdf/framework/reg"
 
 	"github.com/ggoop/mdf/framework/md"
 
-	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/utils"
 )
 
-type DtiSv struct {
-	repo *repositories.MysqlRepo
+//interface
+type IDtiSv interface {
+	GetLocalBy(code string) (*model.DtiLocal, error)
 }
 
-func NewDtiSv(repo *repositories.MysqlRepo) *DtiSv {
-	return &DtiSv{repo: repo}
+func DtiSv() IDtiSv {
+	return dtiSv
 }
-func (s *DtiSv) GetLocalBy(code string) (*model.DtiLocal, error) {
+
+var dtiSv IDtiSv = newDtiSvImlp()
+
+//impl
+type dtiSvImpl struct {
+}
+
+func newDtiSvImlp() *dtiSvImpl {
+	return &dtiSvImpl{}
+}
+func (s *dtiSvImpl) GetLocalBy(code string) (*model.DtiLocal, error) {
 	item := model.DtiLocal{}
-	if err := s.repo.Where("id=? or code=? ", code, code).Take(&item).Error; err != nil {
+	if err := db.Default().Where("id=? or code=? ", code, code).Take(&item).Error; err != nil {
 		return nil, err
 	}
 	return &item, nil
 }
-func (s *DtiSv) UpdateOrCreateLocal(item model.DtiLocal) (*model.DtiLocal, error) {
+func (s *dtiSvImpl) UpdateOrCreateLocal(item model.DtiLocal) (*model.DtiLocal, error) {
 	old := model.DtiLocal{}
 	if !utils.StringIsCode(item.Code) {
 		return nil, errors.CodeError("Code")
 	}
-	s.repo.Where("code=?", item.Code).Take(&old)
+	db.Default().Where("code=?", item.Code).Take(&old)
 	if old.ID != "" {
 		item.ID = old.ID
 		updatas := make(map[string]interface{})
@@ -69,19 +78,19 @@ func (s *DtiSv) UpdateOrCreateLocal(item model.DtiLocal) (*model.DtiLocal, error
 			updatas["Enabled"] = item.Enabled
 		}
 		if len(updatas) > 0 {
-			s.repo.Model(&old).Where("id=?", old.ID).Updates(updatas)
+			db.Default().Model(&old).Where("id=?", old.ID).Updates(updatas)
 		}
 	} else {
 		if item.ID == "" {
 			item.ID = utils.GUID()
 		}
-		s.repo.Create(&item)
+		db.Default().Create(&item)
 	}
 	s.UpdateOrCreateLocalParams(item.ID, item.Params)
 
 	return s.GetLocalBy(item.ID)
 }
-func (s *DtiSv) UpdateOrCreateLocalParams(localID string, params []model.DtiLocalParam) error {
+func (s *dtiSvImpl) UpdateOrCreateLocalParams(localID string, params []model.DtiLocalParam) error {
 	if len(params) == 0 {
 		return nil
 	}
@@ -93,7 +102,7 @@ func (s *DtiSv) UpdateOrCreateLocalParams(localID string, params []model.DtiLoca
 			p.Sequence = i
 		}
 		old := model.DtiLocalParam{}
-		s.repo.Model(old).Take(&old, "local_id=? and code=?", localID, p.Code)
+		db.Default().Model(old).Take(&old, "local_id=? and code=?", localID, p.Code)
 		if old.ID != "" {
 			updatas := make(map[string]interface{})
 			if old.Name != p.Name {
@@ -121,28 +130,28 @@ func (s *DtiSv) UpdateOrCreateLocalParams(localID string, params []model.DtiLoca
 				updatas["Required"] = p.Required
 			}
 			if len(updatas) > 0 {
-				s.repo.Model(&old).Where("id=?", old.ID).Updates(updatas)
+				db.Default().Model(&old).Where("id=?", old.ID).Updates(updatas)
 			}
 		} else {
-			s.repo.Create(&p)
+			db.Default().Create(&p)
 		}
 		codes = append(codes, p.Code)
 	}
 	if len(codes) > 0 {
-		s.repo.Delete(model.DtiLocalParam{}, "local_id=? and code not in (?)", localID, codes)
+		db.Default().Delete(model.DtiLocalParam{}, "local_id=? and code not in (?)", localID, codes)
 	}
 	return nil
 }
 
 //node
-func (s *DtiSv) GetNodeBy(entID, id string) (*model.DtiNode, error) {
+func (s *dtiSvImpl) GetNodeBy(entID, id string) (*model.DtiNode, error) {
 	item := model.DtiNode{}
-	if err := s.repo.Where("ent_id=?", entID).Take(&item).Error; err != nil {
+	if err := db.Default().Where("ent_id=?", entID).Take(&item).Error; err != nil {
 		return nil, err
 	}
 	return &item, nil
 }
-func (s *DtiSv) UpdateOrCreateNode(entID string, item model.DtiNode) (*model.DtiNode, error) {
+func (s *dtiSvImpl) UpdateOrCreateNode(entID string, item model.DtiNode) (*model.DtiNode, error) {
 	if !utils.StringIsCode(item.Code) {
 		return nil, errors.CodeError("Code")
 	}
@@ -156,7 +165,7 @@ func (s *DtiSv) UpdateOrCreateNode(entID string, item model.DtiNode) (*model.Dti
 	}
 	old := model.DtiNode{}
 	if item.ID != "" {
-		s.repo.Where("ent_id=?", entID).Where("id=?", item.ID).Take(&old)
+		db.Default().Where("ent_id=?", entID).Where("id=?", item.ID).Take(&old)
 	}
 	if old.ID != "" {
 		item.ID = old.ID
@@ -177,7 +186,7 @@ func (s *DtiSv) UpdateOrCreateNode(entID string, item model.DtiNode) (*model.Dti
 			updatas["Host"] = item.Host
 		}
 		if len(updatas) > 0 {
-			s.repo.Model(&old).Updates(updatas)
+			db.Default().Model(&old).Updates(updatas)
 		}
 
 	} else {
@@ -185,30 +194,30 @@ func (s *DtiSv) UpdateOrCreateNode(entID string, item model.DtiNode) (*model.Dti
 		if item.ID == "" {
 			item.ID = utils.GUID()
 		}
-		s.repo.Create(&item)
+		db.Default().Create(&item)
 		s.CompileTemplate(entID, item)
 	}
 	return s.GetNodeBy(entID, item.ID)
 }
-func (s *DtiSv) DeleteNode(entID string, ids []string) error {
-	if _, names := md.QuotedBy(&model.DtiNode{}, ids); names != nil {
+func (s *dtiSvImpl) DeleteNode(entID string, ids []string) error {
+	if _, names := md.MDSv().QuotedBy(&model.DtiNode{}, ids); names != nil {
 		return errors.IsQuoted(names...)
 	}
-	s.repo.Where("ent_id = ? and id in(?)", entID, ids).Delete(model.DtiNode{})
+	db.Default().Where("ent_id = ? and id in(?)", entID, ids).Delete(model.DtiNode{})
 	return nil
 }
 
-func (s *DtiSv) CompileTemplate(entID string, node model.DtiNode) error {
+func (s *dtiSvImpl) CompileTemplate(entID string, node model.DtiNode) error {
 	if node.TemplateID == "" {
 		return nil
 	}
 	dtiRemotes := make([]model.DtiRemote, 0)
-	s.repo.Where("node_id=?", node.TemplateID).Find(&dtiRemotes)
+	db.Default().Where("node_id=?", node.TemplateID).Find(&dtiRemotes)
 
 	newItems := make([]interface{}, 0)
 	count := 0
 	for _, d := range dtiRemotes {
-		if s.repo.Model(model.DtiRemote{}).Where("ent_id=?", entID).Where("code=?", d.Code).Count(&count); count > 0 {
+		if db.Default().Model(model.DtiRemote{}).Where("ent_id=?", entID).Where("code=?", d.Code).Count(&count); count > 0 {
 			continue
 		}
 		item := model.DtiRemote{LocalID: d.LocalID, MethodID: d.MethodID, Code: d.Code, Name: d.Name, Enabled: utils.SBool_True}
@@ -218,32 +227,32 @@ func (s *DtiSv) CompileTemplate(entID string, node model.DtiNode) error {
 		item.Header = d.Header
 		item.Memo = d.Memo
 		item.Query = d.Query
-		item.CreatedAt = utils.NewTime()
+		item.CreatedAt = utils.TimeNow()
 		item.EntID = entID
 		item.NodeID = node.ID
 		newItems = append(newItems, item)
 	}
 	if len(newItems) > 0 {
-		s.repo.BatchInsert(newItems)
+		db.Default().BatchInsert(newItems)
 	}
 	return nil
 }
 
 //params
-func (s *DtiSv) GetParamBy(entID, id string) (*model.DtiParam, error) {
+func (s *dtiSvImpl) GetParamBy(entID, id string) (*model.DtiParam, error) {
 	item := model.DtiParam{}
-	if err := s.repo.Where("ent_id=? and id=?", entID, id).Preload("Node").Take(&item).Error; err != nil {
+	if err := db.Default().Where("ent_id=? and id=?", entID, id).Preload("Node").Take(&item).Error; err != nil {
 		return nil, err
 	}
 	return &item, nil
 }
-func (s *DtiSv) UpdateOrCreateParam(entID string, item model.DtiParam) (*model.DtiParam, error) {
+func (s *dtiSvImpl) UpdateOrCreateParam(entID string, item model.DtiParam) (*model.DtiParam, error) {
 	old := model.DtiParam{}
 	if !utils.StringIsCode(item.Code) {
 		return nil, errors.CodeError("Code")
 	}
 	if item.ID != "" {
-		s.repo.Where("ent_id=? and id=?", entID, item.ID).Take(&old)
+		db.Default().Where("ent_id=? and id=?", entID, item.ID).Take(&old)
 	}
 	if old.ID != "" {
 		item.ID = old.ID
@@ -261,39 +270,39 @@ func (s *DtiSv) UpdateOrCreateParam(entID string, item model.DtiParam) (*model.D
 			updatas["NodeID"] = item.NodeID
 		}
 		if len(updatas) > 0 {
-			s.repo.Model(&item).Where("id=?", old.ID).Updates(updatas)
+			db.Default().Model(&item).Where("id=?", old.ID).Updates(updatas)
 		}
 	} else {
 		item.EntID = entID
 		item.ID = utils.GUID()
-		s.repo.Create(&item)
+		db.Default().Create(&item)
 	}
 	return s.GetParamBy(entID, item.ID)
 }
-func (s *DtiSv) DeleteParam(entID string, ids []string) error {
-	if _, names := md.QuotedBy(&model.DtiParam{}, ids); names != nil {
+func (s *dtiSvImpl) DeleteParam(entID string, ids []string) error {
+	if _, names := md.MDSv().QuotedBy(&model.DtiParam{}, ids); names != nil {
 		return errors.IsQuoted(names...)
 	}
-	s.repo.Where("ent_id = ? and id in(?)", entID, ids).Delete(model.DtiParam{})
+	db.Default().Where("ent_id = ? and id in(?)", entID, ids).Delete(model.DtiParam{})
 	return nil
 }
 
 //remotes
-func (s *DtiSv) GetRemoteBy(entID, id string) (*model.DtiRemote, error) {
+func (s *dtiSvImpl) GetRemoteBy(entID, id string) (*model.DtiRemote, error) {
 	item := model.DtiRemote{}
-	if err := s.repo.Where("ent_id=?", entID).Preload("Node").Preload("Local").Take(&item).Error; err != nil {
+	if err := db.Default().Where("ent_id=?", entID).Preload("Node").Preload("Local").Take(&item).Error; err != nil {
 		return nil, err
 	}
 	return &item, nil
 }
-func (s *DtiSv) UpdateOrCreateRemote(entID string, item model.DtiRemote) (*model.DtiRemote, error) {
+func (s *dtiSvImpl) UpdateOrCreateRemote(entID string, item model.DtiRemote) (*model.DtiRemote, error) {
 	old := model.DtiRemote{}
 	if !utils.StringIsCode(item.Code) {
 		return nil, errors.CodeError("Code")
 	}
 
 	if item.ID != "" {
-		s.repo.Where("ent_id=?", entID).Where("id=?", item.ID).Take(&old)
+		db.Default().Where("ent_id=?", entID).Where("id=?", item.ID).Take(&old)
 	}
 	if old.ID != "" {
 		item.ID = old.ID
@@ -305,34 +314,34 @@ func (s *DtiSv) UpdateOrCreateRemote(entID string, item model.DtiRemote) (*model
 			updatas["Name"] = item.Name
 		}
 		if len(updatas) > 0 {
-			s.repo.Model(&item).Updates(updatas)
+			db.Default().Model(&item).Updates(updatas)
 		}
 	} else {
 		item.EntID = entID
 		item.ID = utils.GUID()
-		s.repo.Create(&item)
+		db.Default().Create(&item)
 	}
 	return s.GetRemoteBy(entID, item.ID)
 }
-func (s *DtiSv) DeleteRemote(entID string, ids []string) error {
-	if _, names := md.QuotedBy(&model.DtiRemote{}, ids); names != nil {
+func (s *dtiSvImpl) DeleteRemote(entID string, ids []string) error {
+	if _, names := md.MDSv().QuotedBy(&model.DtiRemote{}, ids); names != nil {
 		return errors.IsQuoted(names...)
 	}
-	s.repo.Where("ent_id = ? and id in(?)", entID, ids).Delete(model.DtiRemote{})
+	db.Default().Where("ent_id = ? and id in(?)", entID, ids).Delete(model.DtiRemote{})
 	return nil
 }
-func (s *DtiSv) GetRemotes(entID string, dtiIDs []string) []model.DtiRemote {
+func (s *dtiSvImpl) GetRemotes(entID string, dtiIDs []string) []model.DtiRemote {
 	dtiRemotes := make([]model.DtiRemote, 0)
-	query := s.repo.Where("ent_id=?", entID).Preload("Node").Preload("Local").Order("`sequence`")
+	query := db.Default().Where("ent_id=?", entID).Preload("Node").Preload("Local").Order("`sequence`")
 	if len(dtiIDs) > 0 {
 		query = query.Where("id in (?) or code in (?)", dtiIDs, dtiIDs)
 	}
 	query.Find(&dtiRemotes)
 	return dtiRemotes
 }
-func (s *DtiSv) RunRemotes(entID string, dtiIDs []string, params map[string]string, ctx *utils.TokenContext) error {
+func (s *dtiSvImpl) RunRemotes(entID string, dtiIDs []string, params map[string]string, ctx *utils.TokenContext) error {
 	dtiRemotes := make([]model.DtiRemote, 0)
-	if err := s.repo.Where("ent_id=? and (id in (?) or code in (?))", entID, dtiIDs, dtiIDs).Preload("Node").Preload("Local").Order("`sequence`").Find(&dtiRemotes).Error; err != nil {
+	if err := db.Default().Where("ent_id=? and (id in (?) or code in (?))", entID, dtiIDs, dtiIDs).Preload("Node").Preload("Local").Order("`sequence`").Find(&dtiRemotes).Error; err != nil {
 		return err
 	}
 	//分组
@@ -366,7 +375,7 @@ func (s *DtiSv) RunRemotes(entID string, dtiIDs []string, params map[string]stri
 	//按分组执行
 	return nil
 }
-func (s *DtiSv) runRemote(entID string, dtiRemote model.DtiRemote, params map[string]string, ctx *utils.TokenContext) error {
+func (s *dtiSvImpl) runRemote(entID string, dtiRemote model.DtiRemote, params map[string]string, ctx *utils.TokenContext) error {
 	defer func() {
 		if r := recover(); r != nil {
 			s.run_log_failed(entID, dtiRemote, fmt.Errorf("未知异常"))
@@ -387,7 +396,7 @@ func (s *DtiSv) runRemote(entID string, dtiRemote model.DtiRemote, params map[st
 	}
 	// 获取参数
 	dtiParams := make([]model.DtiParam, 0)
-	s.repo.Where("ent_id=? and (node_id=? or node_id='' or node_id is null)", entID, dtiRemote.NodeID).Find(&dtiParams)
+	db.Default().Where("ent_id=? and (node_id=? or node_id='' or node_id is null)", entID, dtiRemote.NodeID).Find(&dtiParams)
 	if len(params) > 0 {
 		for k, v := range params {
 			dtiParams = append(dtiParams, model.DtiParam{Code: k, Value: v})
@@ -472,7 +481,7 @@ func (s *DtiSv) runRemote(entID string, dtiRemote model.DtiRemote, params map[st
 	return nil
 }
 
-func (s *DtiSv) run_handResult(entID string, dtiRemote model.DtiRemote, body []byte, params map[string]string, ctx *utils.TokenContext) error {
+func (s *dtiSvImpl) run_handResult(entID string, dtiRemote model.DtiRemote, body []byte, params map[string]string, ctx *utils.TokenContext) error {
 	var remoteUrl *url.URL
 	if dtiRemote.Local.Host != "" && strings.Index(strings.ToLower(dtiRemote.Local.Host), "http") == 0 {
 		remoteUrl, _ = url.Parse(dtiRemote.Local.Host)
@@ -528,7 +537,7 @@ func (s *DtiSv) run_handResult(entID string, dtiRemote model.DtiRemote, body []b
 	}
 	return nil
 }
-func (s *DtiSv) run_parseParams(oldString string, params []model.DtiParam) string {
+func (s *dtiSvImpl) run_parseParams(oldString string, params []model.DtiParam) string {
 	if oldString == "" {
 		return oldString
 	}
@@ -538,7 +547,7 @@ func (s *DtiSv) run_parseParams(oldString string, params []model.DtiParam) strin
 	}
 	return oldString
 }
-func (s *DtiSv) run_getParamValue(code string, params []model.DtiParam) string {
+func (s *dtiSvImpl) run_getParamValue(code string, params []model.DtiParam) string {
 	code = strings.ToLower(code)
 	for _, p := range params {
 		if strings.ToLower(p.Code) == code {
@@ -547,21 +556,20 @@ func (s *DtiSv) run_getParamValue(code string, params []model.DtiParam) string {
 	}
 	return ""
 }
-func (s *DtiSv) run_log_begin(entID string, dti model.DtiRemote, msg string) {
-	s.repo.Model(model.DtiRemote{}).Where("ent_id=? and id=?", entID, dti.ID).Updates(map[string]interface{}{"StatusID": "running", "FmDate": utils.CreateTimePtr(time.Now()), "Msg": msg})
+func (s *dtiSvImpl) run_log_begin(entID string, dti model.DtiRemote, msg string) {
+	db.Default().Model(model.DtiRemote{}).Where("ent_id=? and id=?", entID, dti.ID).Updates(map[string]interface{}{"StatusID": "running", "FmDate": utils.TimeNowPtr(), "Msg": msg})
 	s.run_log(entID, dti, msg)
 }
-func (s *DtiSv) run_log_succeed(entID string, dti model.DtiRemote, msg string) {
-	s.repo.Model(model.DtiRemote{}).Where("ent_id=? and id=?", entID, dti.ID).Updates(map[string]interface{}{"StatusID": "succeed", "ToDate": utils.CreateTimePtr(time.Now()), "Msg": msg})
+func (s *dtiSvImpl) run_log_succeed(entID string, dti model.DtiRemote, msg string) {
+	db.Default().Model(model.DtiRemote{}).Where("ent_id=? and id=?", entID, dti.ID).Updates(map[string]interface{}{"StatusID": "succeed", "ToDate": utils.TimeNowPtr(), "Msg": msg})
 	s.run_log(entID, dti, msg)
 }
-func (s *DtiSv) run_log_failed(entID string, dti model.DtiRemote, err error) error {
-	s.repo.Model(model.DtiRemote{}).Where("ent_id=? and id=?", entID, dti.ID).Updates(map[string]interface{}{"StatusID": "failed", "ToDate": utils.CreateTimePtr(time.Now()), "Msg": err.Error()})
+func (s *dtiSvImpl) run_log_failed(entID string, dti model.DtiRemote, err error) error {
+	db.Default().Model(model.DtiRemote{}).Where("ent_id=? and id=?", entID, dti.ID).Updates(map[string]interface{}{"StatusID": "failed", "ToDate": utils.TimeNowPtr(), "Msg": err.Error()})
 	s.run_log(entID, dti, err.Error())
 	return err
 }
-func (s *DtiSv) run_log(entID string, dti model.DtiRemote, msg string) {
-	logSv := NewLogSv(s.repo)
-	s.repo.Model(model.DtiRemote{}).Where("ent_id=? and id=?", entID, dti.ID).Updates(map[string]interface{}{"Msg": msg})
-	logSv.Create(model.Log{NodeID: dti.Code, NodeType: "dti", EntID: entID, Level: model.LOG_LEVEL_ERROR, Msg: msg})
+func (s *dtiSvImpl) run_log(entID string, dti model.DtiRemote, msg string) {
+	db.Default().Model(model.DtiRemote{}).Where("ent_id=? and id=?", entID, dti.ID).Updates(map[string]interface{}{"Msg": msg})
+	LogSv().Create(model.Log{NodeID: dti.Code, NodeType: "dti", EntID: entID, Level: model.LOG_LEVEL_ERROR, Msg: msg})
 }

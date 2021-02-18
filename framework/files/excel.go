@@ -1,14 +1,11 @@
 package files
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/shopspring/decimal"
 	"io"
 	"path"
 	"strings"
 
-	"github.com/ggoop/mdf/framework/md"
 	"github.com/ggoop/mdf/utils"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
@@ -21,14 +18,21 @@ type FileData struct {
 	Dir      string
 	FullPath string
 }
+
+func (s FileData) String() string {
+	return s.FileName
+}
+
 type ImportData struct {
-	Entity struct {
-		Code string
-		Name string
-	}
-	Name    string
-	Columns map[string]string
-	Datas   []map[string]interface{}
+	EntityCode string
+	EntityName string
+	SheetName  string
+	Columns    map[string]string
+	Data       []map[string]string
+}
+
+func (s ImportData) String() string {
+	return fmt.Sprintf("%s %s", s.SheetName, s.EntityCode)
 }
 
 type ExcelColumn struct {
@@ -47,6 +51,11 @@ type ToExcel struct {
 	Columns  []ExcelColumn
 	Datas    [][]ExcelCell
 }
+
+func (s ToExcel) String() string {
+	return s.FileName
+}
+
 type ExcelSv struct {
 }
 
@@ -56,89 +65,14 @@ type ExcelSv struct {
 func NewExcelSv() *ExcelSv {
 	return &ExcelSv{}
 }
-func GetMapStringValue(key string, row map[string]interface{}) string {
-	v := GetMapValue(key, row)
-	if v == nil {
-		return ""
-	}
-	return utils.ToString(v)
-}
-func GetMapIntValue(key string, row map[string]interface{}) int {
-	v := GetMapValue(key, row)
-	if v == nil {
-		return 0
-	}
-	return utils.ToInt(v)
-}
-
-func GetMapSBoolValue(key string, row map[string]interface{}) utils.SBool {
-	return utils.SBool_Parse(GetMapValue(key, row))
-}
-func GetMapSJsonValue(key string, row map[string]interface{}) utils.SJson {
-	str := GetMapStringValue(key, row)
-	var jsonData interface{}
-	if str != "" {
-		if err := json.Unmarshal([]byte(str), &jsonData); err != nil {
-			jsonData = str
-		}
-	}
-	return utils.SJson_Parse(jsonData)
-}
-func GetMapTimeValue(key string, row map[string]interface{}) *utils.Time {
-	v := GetMapValue(key, row)
-	if v == nil {
-		return nil
-	}
-	if vv, ok := v.(string); ok {
-		return utils.CreateTimePtr(vv)
-	}
-	return nil
-}
-func GetMapBoolValue(key string, row map[string]interface{}, defaultValue bool) bool {
-	v := GetMapValue(key, row)
-	if v == nil {
-		return defaultValue
-	}
-	if vv, ok := v.(string); ok {
-		if vv == "true" || vv == "1" || vv == "T" {
-			return true
-		} else {
-			return false
-		}
-	} else if vv, ok := v.(int); ok {
-		if vv > 0 {
-			return true
-		} else {
-			return false
-		}
-	}
-	return utils.ToBool(v)
-}
-func GetMapDecimalValue(key string, row map[string]interface{}) decimal.Decimal {
-	v := GetMapValue(key, row)
-	if v == nil {
-		return decimal.Zero
-	}
-	if vv, ok := v.(decimal.Decimal); ok {
-		return vv
-	} else if vv, ok := v.(string); ok {
-		rv, _ := decimal.NewFromString(vv)
-		return rv
-	} else if vv, ok := v.(float64); ok {
-		return decimal.NewFromFloat(vv)
-	} else if vv, ok := v.(float32); ok {
-		return decimal.NewFromFloat32(vv)
-	}
-	return decimal.Zero
-}
-func GetMapValue(key string, row map[string]interface{}) interface{} {
+func GetCellValue(key string, row map[string]string) string {
 	if v, ok := row[key]; ok {
 		return v
 	}
 	if v, ok := row[utils.SnakeString(key)]; ok {
 		return v
 	}
-	return nil
+	return ""
 }
 func (s *ExcelSv) GetExcelDatasByReader(r io.Reader, sheetNames ...string) ([]ImportData, error) {
 	xlsx, err := excelize.OpenReader(r)
@@ -198,7 +132,7 @@ func (s *ExcelSv) toExcelData(xlsx *excelize.File) (data ImportData, err error) 
 	if err != nil {
 		return data, err
 	}
-	if len(datas) > 0 && len(datas[0].Datas) > 0 {
+	if len(datas) > 0 && len(datas[0].Data) > 0 {
 		return datas[0], nil
 	}
 	return data, err
@@ -230,25 +164,25 @@ func (s *ExcelSv) getSheetData(xlsx *excelize.File, sheetName string) ([]ImportD
 	//取列数
 	colsMap := make(map[int]string)
 	if hasEntity {
-		currentPart := ImportData{Name: sheetName, Columns: make(map[string]string), Datas: make([]map[string]interface{}, 0)}
+		currentPart := ImportData{SheetName: sheetName, Columns: make(map[string]string), Data: make([]map[string]string, 0)}
 		for i := 0; i < rowCount; i++ {
 			row := allRows[i]
-			values := make(map[string]interface{}, 0)
+			values := make(map[string]string, 0)
 			firstValue := row[0]
 
 			//如果是空行
 			if firstValue == "" {
-				if currentPart.Entity.Code != "" && len(currentPart.Datas) > 0 {
+				if currentPart.EntityCode != "" && len(currentPart.Data) > 0 {
 					entityDatas = append(entityDatas, currentPart)
 				}
-				currentPart = ImportData{Name: sheetName, Columns: make(map[string]string), Datas: make([]map[string]interface{}, 0)}
+				currentPart = ImportData{SheetName: sheetName, Columns: make(map[string]string), Data: make([]map[string]string, 0)}
 				continue
 			}
 			//如果是表标记，则取出表名
 			if firstValue != "" && strings.HasPrefix(firstValue, "[") && strings.HasSuffix(firstValue, "]") {
-				currentPart.Entity.Code = strings.ReplaceAll(strings.ReplaceAll(firstValue, "[", ""), "]", "")
+				currentPart.EntityCode = strings.ReplaceAll(strings.ReplaceAll(firstValue, "[", ""), "]", "")
 				if len(row) > 1 {
-					currentPart.Entity.Name = row[1]
+					currentPart.EntityName = row[1]
 				}
 				//如果没有配置数据行或者标题，栏目，则退出
 				if i+2 >= rowCount {
@@ -269,11 +203,11 @@ func (s *ExcelSv) getSheetData(xlsx *excelize.File, sheetName string) ([]ImportD
 				continue
 			}
 			//如果是数据行
-			if firstValue != "" && currentPart.Entity.Code != "" {
+			if firstValue != "" && currentPart.EntityCode != "" {
 				isData = true
 				for c, value := range row {
 					if cName, ok := colsMap[c]; ok && cName != "" {
-						if cName == md.STATE_FIELD && value == md.STATE_IGNORED {
+						if cName == utils.STATE_FIELD && value == utils.STATE_IGNORED {
 							isData = false
 							break
 						}
@@ -281,15 +215,15 @@ func (s *ExcelSv) getSheetData(xlsx *excelize.File, sheetName string) ([]ImportD
 					}
 				}
 				if isData {
-					currentPart.Datas = append(currentPart.Datas, values)
+					currentPart.Data = append(currentPart.Data, values)
 				}
 			}
 		}
-		if currentPart.Entity.Code != "" && len(currentPart.Datas) > 0 {
+		if currentPart.EntityCode != "" && len(currentPart.Data) > 0 {
 			entityDatas = append(entityDatas, currentPart)
 		}
 	} else {
-		currentPart := ImportData{Name: sheetName, Columns: make(map[string]string), Datas: make([]map[string]interface{}, 0)}
+		currentPart := ImportData{SheetName: sheetName, Columns: make(map[string]string), Data: make([]map[string]string, 0)}
 		cols := allRows[0]
 		titles := allRows[1]
 		for c, name := range cols {
@@ -301,12 +235,12 @@ func (s *ExcelSv) getSheetData(xlsx *excelize.File, sheetName string) ([]ImportD
 		if len(colsMap) == 0 {
 			return entityDatas, nil
 		}
-		datas := make([]map[string]interface{}, 0)
+		datas := make([]map[string]string, 0)
 		isData := false
 		for i := 2; i < rowCount; i++ {
 			row := allRows[i]
 			isData = false
-			values := make(map[string]interface{}, 0)
+			values := make(map[string]string, 0)
 			for c, value := range row {
 				if cName, ok := colsMap[c]; ok {
 					if c == 0 && value != "" {
@@ -321,7 +255,7 @@ func (s *ExcelSv) getSheetData(xlsx *excelize.File, sheetName string) ([]ImportD
 				break
 			}
 		}
-		currentPart.Datas = datas
+		currentPart.Data = datas
 		if len(datas) > 0 {
 			entityDatas = append(entityDatas, currentPart)
 		}
@@ -329,7 +263,7 @@ func (s *ExcelSv) getSheetData(xlsx *excelize.File, sheetName string) ([]ImportD
 	return entityDatas, nil
 }
 
-func (s *ExcelSv) getCellValue(value string, idMap map[string]string) interface{} {
+func (s *ExcelSv) getCellValue(value string, idMap map[string]string) string {
 	if value == "" {
 		return value
 	}
@@ -391,7 +325,7 @@ func (s *ExcelSv) ToExcel(data *ToExcel) (*FileData, error) {
 		fileData.FileName = fmt.Sprintf("%s.%s", utils.GUID(), "xlsx")
 	}
 	if fileData.Dir == "" {
-		fileData.Dir = path.Join(utils.DefaultConfig.App.Storage, "exports", utils.NewTime().Format("200601"))
+		fileData.Dir = path.Join(utils.DefaultConfig.App.Storage, "exports", utils.TimeNow().Format("200601"))
 	}
 	utils.CreatePath(fileData.Dir)
 	fileData.FullPath = utils.JoinCurrentPath(path.Join(fileData.Dir, fileData.FileName))

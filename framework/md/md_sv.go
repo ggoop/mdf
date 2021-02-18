@@ -2,30 +2,117 @@ package md
 
 import (
 	"fmt"
+	"github.com/ggoop/mdf/db"
+	"github.com/ggoop/mdf/framework/files"
+	"sort"
 	"strings"
+	"sync"
 
-	"github.com/ggoop/mdf/framework/db/repositories"
 	"github.com/ggoop/mdf/framework/glog"
 	"github.com/ggoop/mdf/utils"
 )
 
-type MDSv struct {
-	repo *repositories.MysqlRepo
+type IMDSv interface {
+	Migrate(values ...interface{})
+	AddMDEntities(items []MDEntity) error
+	BatchImport(datas []files.ImportData) error
+	GetEntity(id string) *MDEntity
+
+	GetEnum(typeId string, values ...string) *MDEnum
+
+	TakeDataByQ(token *utils.TokenContext, req *ReqContext) (map[string]interface{}, error)
+	UpdateEntity(item MDEntity) error
+	UpdateEnumType(enumType MDEnumType) error
+
+	QuotedBy(m MD, ids []string, excludes ...MD) ([]MDEntity, []string)
 }
 
-func NewMDSv(repo *repositories.MysqlRepo) *MDSv {
-	return &MDSv{repo: repo}
+type mdSvImpl struct {
+	*sync.Mutex
+	mdCache         map[string]*MDEntity
+	enumCache       map[string]*MDEnum
+	initMDCompleted bool
 }
 
-func (s *MDSv) getEntity(entityID string) MDEntity {
-	item := MDEntity{}
-	s.repo.Model(item).Order("id").Take(&item, "id=?", entityID)
-	return item
+func MDSv() IMDSv {
+	return mdSv
 }
-func (s *MDSv) ImportUIMeta(entityID string) {
+
+var mdSv IMDSv = newMDSv()
+
+func newMDSv() *mdSvImpl {
+	return &mdSvImpl{
+		Mutex:     &sync.Mutex{},
+		mdCache:   make(map[string]*MDEntity),
+		enumCache: make(map[string]*MDEnum),
+	}
+}
+
+func (s *mdSvImpl) InitCache() {
+	s.enumCache = make(map[string]*MDEnum)
+	items, _ := s.GetEnums()
+	for i, _ := range items {
+		v := items[i]
+		s.enumCache[strings.ToLower(v.EntityID+":"+v.ID)] = &v
+		s.enumCache[strings.ToLower(v.EntityID+":"+v.Name)] = &v
+	}
+}
+
+func (s *mdSvImpl) GetEnums() ([]MDEnum, error) {
+	items := make([]MDEnum, 0)
+	if err := db.Default().Model(&MDEnum{}).Where("entity_id in (?)", db.Default().Model(MDEntity{}).Select("id").Where("type=?", "enum").SubQuery()).Order("entity_id").Order("sequence").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (s *mdSvImpl) Migrate(values ...interface{}) {
+	//先增加模型表
+	if !s.initMDCompleted {
+		s.initMDCompleted = true
+		mds := []interface{}{
+			&MDEntity{}, &MDEntityRelation{}, &MDField{}, &MDEnum{},
+			&MDActionCommand{}, &MDActionRule{},
+			&MDWidget{}, &MDWidgetDatasource{}, &MDWidgetLayout{}, &MDWidgetItem{},
+			&MDToolbars{}, &MDToolbarItem{},
+			&MDActionCommand{}, &MDActionRule{},
+			&MDFilters{}, &MDFilterSolution{}, &MDFilterItem{},
+		}
+		needDb := make([]interface{}, 0)
+		for _, v := range mds {
+			m := newMd(v)
+			if dd := m.GetMder(); dd == nil || dd.Type == utils.TYPE_ENTITY || dd.Type == utils.TYPE_ENUM || dd.Type == "" {
+				needDb = append(needDb, v)
+			}
+		}
+		db.Default().AutoMigrate(needDb...)
+		glog.Error("AutoMigrate MD")
+		for _, v := range mds {
+			m := newMd(v)
+			m.Migrate()
+		}
+
+		initData()
+	}
+	if len(values) > 0 {
+		needDb := make([]interface{}, 0)
+		for _, v := range values {
+			m := newMd(v)
+			if dd := m.GetMder(); dd == nil || dd.Type == utils.TYPE_ENTITY || dd.Type == utils.TYPE_ENUM || dd.Type == "" {
+				needDb = append(needDb, v)
+			}
+			m.Migrate()
+		}
+		if err := db.Default().AutoMigrate(needDb...).Error; err != nil {
+			glog.Error(err)
+		}
+	}
+
+}
+func (s *mdSvImpl) ImportUIMeta(entityID string) {
 	return
 }
-func (s *MDSv) entityToTables(items []MDEntity, oldItems []MDEntity) error {
+func (s *mdSvImpl) entityToTables(items []MDEntity, oldItems []MDEntity) error {
 	if items == nil || len(items) == 0 {
 		return nil
 	}
@@ -38,13 +125,13 @@ func (s *MDSv) entityToTables(items []MDEntity, oldItems []MDEntity) error {
 				break
 			}
 		}
-		if entity.Type != TYPE_ENTITY {
+		if entity.Type != utils.TYPE_ENTITY {
 			continue
 		}
 		if entity.TableName == "" {
 			entity.TableName = strings.ReplaceAll(entity.ID, ".", "_")
 		}
-		if s.repo.Dialect().HasTable(entity.TableName) {
+		if db.Default().Dialect().HasTable(entity.TableName) {
 			s.updateTable(entity, oldItem)
 		} else {
 			s.createTable(entity)
@@ -52,7 +139,7 @@ func (s *MDSv) entityToTables(items []MDEntity, oldItems []MDEntity) error {
 	}
 	return nil
 }
-func (s *MDSv) createTable(item MDEntity) {
+func (s *mdSvImpl) createTable(item MDEntity) {
 	if len(item.Fields) == 0 {
 		return
 	}
@@ -72,14 +159,14 @@ func (s *MDSv) createTable(item MDEntity) {
 		primaryKeyStr = fmt.Sprintf(", PRIMARY KEY (%v)", strings.Join(primaryKeys, ","))
 	}
 	var tableOptions string
-	if err := s.repo.Exec(fmt.Sprintf("CREATE TABLE %v (%v %v)%s", s.quote(item.TableName), strings.Join(tags, ","), primaryKeyStr, tableOptions)).Error; err != nil {
+	if err := db.Default().Exec(fmt.Sprintf("CREATE TABLE %v (%v %v)%s", s.quote(item.TableName), strings.Join(tags, ","), primaryKeyStr, tableOptions)).Error; err != nil {
 		glog.Error(err)
 	}
 }
-func (s *MDSv) quote(str string) string {
-	return s.repo.Dialect().Quote(str)
+func (s *mdSvImpl) quote(str string) string {
+	return db.Default().Dialect().Quote(str)
 }
-func (s *MDSv) updateTable(item MDEntity, old MDEntity) {
+func (s *mdSvImpl) updateTable(item MDEntity, old MDEntity) {
 	//更新栏目
 	for i := range item.Fields {
 		field := item.Fields[i]
@@ -97,22 +184,22 @@ func (s *MDSv) updateTable(item MDEntity, old MDEntity) {
 			continue
 		}
 		newString := s.buildColumnNameString(field)
-		if s.repo.Dialect().HasColumn(item.TableName, field.DbName) { //字段已存在
+		if db.Default().Dialect().HasColumn(item.TableName, field.DbName) { //字段已存在
 			oldString := s.buildColumnNameString(oldField)
 			//修改字段类型、类型长度、默认值、注释
 			if oldString != newString && strings.Contains(item.Tags, "update") {
-				if err := s.repo.Exec(fmt.Sprintf("ALTER TABLE %v MODIFY %v", s.quote(item.TableName), newString)).Error; err != nil {
+				if err := db.Default().Exec(fmt.Sprintf("ALTER TABLE %v MODIFY %v", s.quote(item.TableName), newString)).Error; err != nil {
 					glog.Error(err)
 				}
 			}
 		} else { //新增字段
-			if err := s.repo.Exec(fmt.Sprintf("ALTER TABLE %v ADD %v", s.quote(item.TableName), newString)).Error; err != nil {
+			if err := db.Default().Exec(fmt.Sprintf("ALTER TABLE %v ADD %v", s.quote(item.TableName), newString)).Error; err != nil {
 				glog.Error(err)
 			}
 		}
 	}
 }
-func (s *MDSv) buildColumnNameString(item MDField) string {
+func (s *mdSvImpl) buildColumnNameString(item MDField) string {
 	/*
 		column_definition:
 		data_type [NOT NULL | NULL] [DEFAULT {literal | (expr)} ]
@@ -120,14 +207,14 @@ func (s *MDSv) buildColumnNameString(item MDField) string {
 		[COMMENT 'string']
 
 	*/
-	dialectName := s.repo.Dialect().GetName()
+	dialectName := db.Default().Dialect().GetName()
 	if dialectName == "godror" || dialectName == "oracle" {
 		return s.buildColumnNameString4Oracle(item)
 	} else {
 		return s.buildColumnNameString4Mysql(item)
 	}
 }
-func (s *MDSv) AddMDEntities(items []MDEntity) error {
+func (s *mdSvImpl) AddMDEntities(items []MDEntity) error {
 	entityIds := make([]string, 0)
 	oldEntities := make([]MDEntity, 0)
 	for i, _ := range items {
@@ -136,7 +223,7 @@ func (s *MDSv) AddMDEntities(items []MDEntity) error {
 			continue
 		}
 		oldEntity := MDEntity{}
-		if s.repo.Model(oldEntity).Preload("Fields").Order("id").Where("id=?", entity.ID).Take(&oldEntity); oldEntity.ID != "" {
+		if db.Default().Model(oldEntity).Preload("Fields").Order("id").Where("id=?", entity.ID).Take(&oldEntity); oldEntity.ID != "" {
 			oldEntities = append(oldEntities, oldEntity)
 			datas := make(map[string]interface{})
 			if oldEntity.TableName != entity.TableName {
@@ -164,20 +251,20 @@ func (s *MDSv) AddMDEntities(items []MDEntity) error {
 				datas["Memo"] = entity.Memo
 			}
 			if len(datas) > 0 {
-				s.repo.Model(MDEntity{}).Where("id=?", oldEntity.ID).Updates(datas)
+				db.Default().Model(MDEntity{}).Where("id=?", oldEntity.ID).Updates(datas)
 			}
 		} else {
-			if entity.Type == TYPE_ENTITY && entity.TableName == "" {
+			if entity.Type == utils.TYPE_ENTITY && entity.TableName == "" {
 				entity.TableName = strings.ReplaceAll(entity.ID, ".", "_")
 			}
-			s.repo.Create(&entity)
+			db.Default().Create(&entity)
 		}
 		entityIds = append(entityIds, entity.ID)
 	}
 	//属性字段
 	for i, _ := range items {
 		entity := items[i]
-		if entity.ID != "" && entity.Type == TYPE_ENTITY && len(entity.Fields) > 0 {
+		if entity.ID != "" && entity.Type == utils.TYPE_ENTITY && len(entity.Fields) > 0 {
 			itemCodes := make([]string, 0)
 			for f, _ := range entity.Fields {
 				field := entity.Fields[f]
@@ -190,11 +277,11 @@ func (s *MDSv) AddMDEntities(items []MDEntity) error {
 					field.DbName = utils.SnakeString(field.Code)
 				}
 				oldField := MDField{}
-				if fieldType := s.getEntity(field.TypeID); fieldType.ID != "" {
+				if fieldType := s.GetEntity(field.TypeID); fieldType != nil {
 					field.TypeType = fieldType.Type
 					field.TypeID = fieldType.ID
 				}
-				if field.TypeType == TYPE_ENTITY { //实体
+				if field.TypeType == utils.TYPE_ENTITY { //实体
 					if field.Kind == "" {
 						field.Kind = "belongs_to"
 					}
@@ -205,7 +292,7 @@ func (s *MDSv) AddMDEntities(items []MDEntity) error {
 						field.AssociationKey = "ID"
 					}
 					field.IsNormal = utils.SBool_False
-				} else if field.TypeType == TYPE_ENUM { //枚举
+				} else if field.TypeType == utils.TYPE_ENUM { //枚举
 					if field.Kind == "" {
 						field.Kind = "belongs_to"
 					}
@@ -217,7 +304,7 @@ func (s *MDSv) AddMDEntities(items []MDEntity) error {
 					}
 					field.IsNormal = utils.SBool_False
 				}
-				if s.repo.Model(MDField{}).Order("id").Where("entity_id=? and code=?", entity.ID, field.Code).Take(&oldField); oldField.ID != "" {
+				if db.Default().Model(MDField{}).Order("id").Where("entity_id=? and code=?", entity.ID, field.Code).Take(&oldField); oldField.ID != "" {
 					datas := make(map[string]interface{})
 					if oldField.Name != field.Name {
 						datas["Name"] = field.Name
@@ -277,24 +364,24 @@ func (s *MDSv) AddMDEntities(items []MDEntity) error {
 						datas["SrcID"] = field.SrcID
 					}
 					if len(datas) > 0 {
-						s.repo.Model(MDField{}).Where("entity_id=? and code=?", entity.ID, field.Code).Updates(datas)
+						db.Default().Model(MDField{}).Where("entity_id=? and code=?", entity.ID, field.Code).Updates(datas)
 					}
 				} else {
-					s.repo.Create(&field)
+					db.Default().Create(&field)
 				}
 			}
-			s.repo.Delete(MDField{}, "entity_id=? and code not in (?)", entity.ID, itemCodes)
+			db.Default().Delete(MDField{}, "entity_id=? and code not in (?)", entity.ID, itemCodes)
 		}
 	}
 	//枚举
 	for _, entity := range items {
-		if entity.ID != "" && entity.Type == TYPE_ENUM && len(entity.Fields) > 0 {
+		if entity.ID != "" && entity.Type == utils.TYPE_ENUM && len(entity.Fields) > 0 {
 			itemCodes := make([]string, 0)
 			for f, field := range entity.Fields {
 				newEnum := MDEnum{ID: field.Code, EntityID: entity.ID, Sequence: f, Name: field.Name}
 				oldEnum := MDEnum{}
 				itemCodes = append(itemCodes, newEnum.ID)
-				if s.repo.Model(oldEnum).Order("id").Where("entity_id=? and id=?", newEnum.EntityID, newEnum.ID).Take(&oldEnum); oldEnum.ID != "" {
+				if db.Default().Model(oldEnum).Order("id").Where("entity_id=? and id=?", newEnum.EntityID, newEnum.ID).Take(&oldEnum); oldEnum.ID != "" {
 					datas := make(map[string]interface{})
 					if oldEnum.Name != field.Name {
 						datas["Name"] = field.Name
@@ -303,21 +390,146 @@ func (s *MDSv) AddMDEntities(items []MDEntity) error {
 						datas["Sequence"] = newEnum.Sequence
 					}
 					if len(datas) > 0 {
-						s.repo.Model(MDEnum{}).Where("entity_id=? and id=?", oldEnum.EntityID, oldEnum.ID).Updates(datas)
+						db.Default().Model(MDEnum{}).Where("entity_id=? and id=?", oldEnum.EntityID, oldEnum.ID).Updates(datas)
 					}
 				} else {
-					s.repo.Create(&newEnum)
+					db.Default().Create(&newEnum)
 				}
 			}
-			s.repo.Delete(MDEnum{}, "entity_id=? and id not in (?)", entity.ID, itemCodes)
+			db.Default().Delete(MDEnum{}, "entity_id=? and id not in (?)", entity.ID, itemCodes)
 		}
 	}
 	if len(entityIds) > 0 {
 		toTables := make([]MDEntity, 0)
-		s.repo.Model(MDEntity{}).Preload("Fields").Where("id in (?) and type=?", entityIds, TYPE_ENTITY).Find(&toTables)
+		db.Default().Model(MDEntity{}).Preload("Fields").Where("id in (?) and type=?", entityIds, utils.TYPE_ENTITY).Find(&toTables)
 		return s.entityToTables(toTables, oldEntities)
 	}
 	//缓存
-	CacheMD(s.repo)
+	s.InitCache()
 	return nil
+}
+
+func (s *mdSvImpl) BatchImport(datas []files.ImportData) error {
+	if len(datas) > 0 {
+		nameList := make(map[string]int)
+		nameList["Entity"] = 1
+		nameList["Props"] = 2
+		nameList["Page"] = 3
+		nameList["Widgets"] = 4
+		nameList["ActionCommand"] = 5
+		nameList["ActionRule"] = 6
+
+		sort.Slice(datas, func(i, j int) bool { return nameList[datas[i].SheetName] < nameList[datas[j].SheetName] })
+
+		entities := make([]MDEntity, 0)
+		fields := make([]MDField, 0)
+		for _, item := range datas {
+			if item.SheetName == "Entity" {
+				if d, err := s.toEntities(item); err != nil {
+					return err
+				} else if len(d) > 0 {
+					entities = append(entities, d...)
+				}
+			}
+			if item.SheetName == "Props" {
+				if d, err := s.toFields(item); err != nil {
+					return err
+				} else if len(d) > 0 {
+					fields = append(fields, d...)
+				}
+			}
+		}
+		if len(entities) > 0 {
+			for i, entity := range entities {
+				for _, field := range fields {
+					if entity.ID == field.EntityID {
+						if entities[i].Fields == nil {
+							entities[i].Fields = make([]MDField, 0)
+						}
+						entities[i].Fields = append(entities[i].Fields, field)
+					}
+				}
+			}
+			s.AddMDEntities(entities)
+		}
+	}
+	return nil
+}
+func (s *mdSvImpl) toEntities(data files.ImportData) ([]MDEntity, error) {
+	if len(data.Data) == 0 {
+		return nil, nil
+	}
+	items := make([]MDEntity, 0)
+	for _, row := range data.Data {
+		item := MDEntity{}
+		item.ID = files.GetCellValue("ID", row)
+		item.Name = files.GetCellValue("Name", row)
+		item.Type = files.GetCellValue("Type", row)
+		item.TableName = files.GetCellValue("TableName", row)
+		item.Domain = files.GetCellValue("Domain", row)
+		item.System = utils.ToSBool(files.GetCellValue("System", row))
+		items = append(items, item)
+	}
+	return items, nil
+}
+func (s *mdSvImpl) toFields(data files.ImportData) ([]MDField, error) {
+	if len(data.Data) == 0 {
+		return nil, nil
+	}
+	items := make([]MDField, 0)
+	for _, row := range data.Data {
+		item := MDField{}
+		if cValue := files.GetCellValue("EntityID", row); cValue != "" {
+			item.EntityID = cValue
+		}
+		if cValue := files.GetCellValue("Name", row); cValue != "" {
+			item.Name = cValue
+		}
+		if cValue := files.GetCellValue("Code", row); cValue != "" {
+			item.Code = cValue
+		}
+		if cValue := files.GetCellValue("TypeID", row); cValue != "" {
+			item.TypeID = cValue
+		}
+		if cValue := files.GetCellValue("Kind", row); cValue != "" {
+			item.Kind = cValue
+		}
+		if cValue := files.GetCellValue("ForeignKey", row); cValue != "" {
+			item.ForeignKey = cValue
+		}
+		if cValue := files.GetCellValue("AssociationKey", row); cValue != "" {
+			item.AssociationKey = cValue
+		}
+		if cValue := files.GetCellValue("DbName", row); cValue != "" {
+			item.DbName = cValue
+		}
+		if cValue := files.GetCellValue("DbName", row); cValue != "" {
+			item.DbName = cValue
+		}
+		if cValue := utils.ToInt(files.GetCellValue("Length", row)); cValue >= 0 {
+			item.Length = cValue
+		}
+		if cValue := utils.ToInt(files.GetCellValue("Precision", row)); cValue >= 0 {
+			item.Precision = cValue
+		}
+		if cValue := files.GetCellValue("DefaultValue", row); cValue != "" {
+			item.DefaultValue = cValue
+		}
+		if cValue := files.GetCellValue("MaxValue", row); cValue != "" {
+			item.MaxValue = cValue
+		}
+		if cValue := files.GetCellValue("MinValue", row); cValue != "" {
+			item.MinValue = cValue
+		}
+		if cValue := files.GetCellValue("Tags", row); cValue != "" {
+			item.Tags = cValue
+		}
+		if cValue := files.GetCellValue("Limit", row); cValue != "" {
+			item.Limit = cValue
+		}
+		item.Nullable = utils.ToSBool(files.GetCellValue("Nullable", row))
+		item.IsPrimaryKey = utils.ToSBool(files.GetCellValue("IsPrimaryKey", row))
+		items = append(items, item)
+	}
+	return items, nil
 }

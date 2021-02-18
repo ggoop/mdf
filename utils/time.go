@@ -22,13 +22,13 @@ const (
 	Layout_YYYYMMDD2       = "20060102"
 )
 
-func NewTime() Time {
-	return CreateTime(time.Now())
+func TimeNow() Time {
+	return ToTime(time.Now())
 }
-func NewTimePtr() *Time {
-	return CreateTimePtr(time.Now())
+func TimeNowPtr() *Time {
+	return ToTimePtr(time.Now())
 }
-func CreateTime(value interface{}) Time {
+func ToTime(value interface{}) Time {
 	if value == "" || value == nil {
 		return Time{}
 	}
@@ -60,8 +60,8 @@ func CreateTime(value interface{}) Time {
 	}
 	return Time{time.Now()}
 }
-func CreateTimePtr(value interface{}) *Time {
-	t := CreateTime(value)
+func ToTimePtr(value interface{}) *Time {
+	t := ToTime(value)
 	return &t
 }
 
@@ -105,7 +105,7 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 
 // deserialization.
 func (d *Time) UnmarshalText(text []byte) error {
-	*d = CreateTime(string(text))
+	*d = ToTime(string(text))
 	return nil
 }
 
@@ -126,7 +126,7 @@ func (t Time) Value() (driver.Value, error) {
 
 // Scan valueof time.Time
 func (t *Time) Scan(v interface{}) error {
-	*t = CreateTime(v)
+	*t = ToTime(v)
 	return nil
 }
 func (d Time) Valid() bool {
