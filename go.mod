@@ -10,7 +10,9 @@ require (
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/protobuf v1.3.2
+	github.com/lib/pq v1.9.0 // indirect
 	github.com/mattn/go-isatty v0.0.3
+	github.com/mattn/go-sqlite3 v1.14.6 // indirect
 	github.com/robfig/cron v1.2.0
 	github.com/shopspring/decimal v1.2.0
 	github.com/spf13/viper v1.7.1
